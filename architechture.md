@@ -77,6 +77,8 @@ Responsibilities:
 - `notes`
 - `freeze_date`
 
+This includes `ExtractedPlasmid`, `BacterialStock`, and `SolidMediaPlate`.
+
 ### Why extend `Collection`
 The storage system is naturally hierarchical and grouping-oriented. `Collection` is therefore a good fit for representing:
 
@@ -84,6 +86,9 @@ The storage system is naturally hierarchical and grouping-oriented. `Collection`
 - shelves
 - boxes
 - slots
+
+Only storage nodes are collections. A `SolidMediaPlate` is not a collection
+root and is treated the same way as other inventory implementations.
 
 That keeps the storage layout explicit without inventing a second containment mechanism.
 

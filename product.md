@@ -61,6 +61,9 @@ The package must support creation of typed SBOL implementations for:
 - bacterial stock
 - solid media plate
 
+All three are physical inventory objects and must be represented as
+`InventoryImplementation` (SBOL `Implementation`), not storage collections.
+
 ### FR2: storage hierarchy creation
 The package must support creation of storage nodes for:
 - freezer or fridge
@@ -80,6 +83,9 @@ The package must support application-level validation rules:
 - extracted plasmids go to -20 C
 - bacterial stocks go to -80 C
 - solid media plates go to 4 C storage
+
+Placement is expressed through slot membership, where slots are storage
+collections and inventory items (including plates) are implementations.
 
 ### FR5: examples
 The repository must include examples that are easy for humans and AI coding agents to execute and extend.

@@ -21,7 +21,7 @@ def validate_item(item: InventoryImplementation) -> None:
 
 
 def validate_placement(item: InventoryImplementation, slot: StorageCollection) -> None:
-    """Validate whether an item is allowed to be placed in a slot."""
+    """Validate whether an implementation item is allowed in a storage slot."""
     allowed = set(slot.allowed_item_kinds)
     if allowed and str(item.inventory_kind) not in allowed:
         raise ValueError(

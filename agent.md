@@ -33,6 +33,10 @@ The initial implementation should preserve the core behavior of the prototype:
 - containment helpers
 - placement validation
 
+Semantic requirement: `SolidMediaPlate` is a physical inventory item and must
+be modeled as `InventoryImplementation` (SBOL `Implementation`), not as a
+storage `Collection`.
+
 ## Repository rules
 
 ### 1. Keep scope tight

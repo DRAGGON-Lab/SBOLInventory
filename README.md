@@ -28,6 +28,9 @@ Those can be built later on top of this package.
 - `BacterialStock`
 - `SolidMediaPlate`
 
+All inventory items above are modeled as `InventoryImplementation` objects
+(SBOL `Implementation`), including `SolidMediaPlate`.
+
 ### Storage hierarchy
 - `FridgeMinus80C`
 - `FridgeMinus20C`
@@ -35,6 +38,9 @@ Those can be built later on top of this package.
 - `Shelf`
 - `Box`
 - `Slot`
+
+All storage nodes above are modeled as `StorageCollection` objects (SBOL
+`Collection`).
 
 ## Repository structure
 
@@ -109,6 +115,9 @@ place_item(slot, stock)
 
 validate_placement(stock, slot)
 ```
+
+`SolidMediaPlate` uses the same item workflow (`make_solid_media_plate`,
+`validate_placement`, `place_item`) and is **not** a storage node.
 
 ## Design principles
 
