@@ -25,8 +25,8 @@ When code and docs diverge, update the docs in the same change.
 ## Current package intent
 The initial implementation should preserve the core behavior of the prototype:
 
-- custom `InventoryImplementation`
-- custom `StorageCollection`
+- custom `InventoryImplementation` (including `SolidMediaPlate`)
+- custom `StorageCollection` (storage hierarchy only)
 - controlled vocabulary constants
 - storage factories
 - implementation factories

@@ -25,8 +25,8 @@ This module is the single source of truth for vocabulary constants.
 ### `schema.py`
 Contains the extension-aware object definitions:
 
-- `InventoryImplementation`
-- `StorageCollection`
+- `InventoryImplementation` for physical tracked items (`ExtractedPlasmid`, `BacterialStock`, `SolidMediaPlate`)
+- `StorageCollection` for storage hierarchy nodes (`FridgeMinus80C`, `FridgeMinus20C`, `Fridge4C`, `Shelf`, `Box`, `Slot`)
 
 Responsibilities:
 - define extension properties
@@ -86,6 +86,8 @@ The storage system is naturally hierarchical and grouping-oriented. `Collection`
 - slots
 
 That keeps the storage layout explicit without inventing a second containment mechanism.
+
+`SolidMediaPlate` is intentionally not modeled as a collection/container root; it is a physical inventory implementation that is placed into slot collections.
 
 ### Why keep validation separate
 Constructors should create objects.

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Sequence
 
 from .namespaces import (
     EXTRACTED_PLASMID,
@@ -63,7 +63,7 @@ def make_slot(
     label: Optional[str] = None,
     row: Optional[str] = None,
     column: Optional[str] = None,
-    allowed_item_kinds=None,
+    allowed_item_kinds: Optional[Sequence[str]] = None,
 ) -> StorageCollection:
     x = StorageCollection(uri)
     x.storage_kind = SLOT
@@ -74,7 +74,7 @@ def make_slot(
     if column:
         x.column = column
     if allowed_item_kinds:
-        x.allowed_item_kinds = allowed_item_kinds
+        x.allowed_item_kinds = list(allowed_item_kinds)
     return x
 
 
@@ -118,7 +118,11 @@ def make_solid_media_plate(
     slot_uri: Optional[str] = None,
     design_uri: Optional[str] = None,
 ) -> InventoryImplementation:
-    """Create a solid media plate implementation."""
+    """Create a solid media plate inventory implementation.
+
+    Solid media plates are physical tracked items and intentionally modeled as
+    :class:`InventoryImplementation`, parallel to plasmids and bacterial stocks.
+    """
     x = InventoryImplementation(uri)
     x.inventory_kind = SOLID_MEDIA_PLATE
     x.built = plate_md_uri
@@ -129,14 +133,23 @@ def make_solid_media_plate(
     return x
 
 
+def _append_member(collection: StorageCollection, child_identity: str) -> None:
+    """Add a member identity for pySBOL2 list-like and set-like containers."""
+    members = collection.members
+    if hasattr(members, "add"):
+        members.add(child_identity)
+    else:
+        members.append(child_identity)
+
+
 def add_child(parent: StorageCollection, child) -> None:
     """Attach a storage node or inventory item to a parent collection."""
-    parent.members.add(child.identity)
+    _append_member(parent, child.identity)
     if isinstance(child, StorageCollection):
         child.parent_storage = parent.identity
 
 
 def place_item(slot: StorageCollection, item: InventoryImplementation) -> None:
     """Place an inventory item into a leaf slot."""
-    slot.members.add(item.identity)
+    _append_member(slot, item.identity)
     item.stored_at = slot.identity

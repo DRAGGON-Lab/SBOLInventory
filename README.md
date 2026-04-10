@@ -4,8 +4,8 @@ SBOLInventory is a Python package for representing laboratory inventory objects 
 
 The package wraps the core ideas in the initial prototype into a reusable library:
 
-- `InventoryImplementation` extends SBOL `Implementation`
-- `StorageCollection` extends SBOL `Collection`
+- `InventoryImplementation` extends SBOL `Implementation` for **all physical inventory objects** (`ExtractedPlasmid`, `BacterialStock`, and `SolidMediaPlate`)
+- `StorageCollection` extends SBOL `Collection` for storage hierarchy nodes only (`FridgeMinus80C`, `FridgeMinus20C`, `Fridge4C`, `Shelf`, `Box`, `Slot`)
 - factory functions create typed inventory objects and storage nodes
 - containment helpers connect freezers, shelves, boxes, slots, and stored items
 - validation helpers enforce placement rules
@@ -23,10 +23,12 @@ Those can be built later on top of this package.
 
 ## Domain model
 
-### Inventory implementations
+### Inventory implementations (SBOL `Implementation`)
 - `ExtractedPlasmid`
 - `BacterialStock`
 - `SolidMediaPlate`
+
+`SolidMediaPlate` is an inventory item, not a storage node. It may point to a design via `built`, and it is placed into `Slot` collections like other inventory implementations.
 
 ### Storage hierarchy
 - `FridgeMinus80C`

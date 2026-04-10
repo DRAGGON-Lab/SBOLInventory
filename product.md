@@ -27,7 +27,7 @@ Primary users:
 ## MVP
 The first release of SBOLInventory should support:
 
-- custom SBOL extension-aware classes for inventory objects and storage collections
+- custom SBOL extension-aware classes for inventory objects (`InventoryImplementation`) and storage collections (`StorageCollection`)
 - controlled vocabulary constants for item and storage kinds
 - factory functions for:
   - `ExtractedPlasmid`
@@ -59,7 +59,7 @@ This repository should not initially include:
 The package must support creation of typed SBOL implementations for:
 - extracted plasmid
 - bacterial stock
-- solid media plate
+- solid media plate (modeled as `InventoryImplementation`, not as storage)
 
 ### FR2: storage hierarchy creation
 The package must support creation of storage nodes for:
