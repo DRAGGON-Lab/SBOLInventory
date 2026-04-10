@@ -69,6 +69,11 @@ At minimum, verify:
 - allowed placement
 - rejected placement
 
+For `SolidMediaPlate`, keep semantics explicit:
+- model it as `InventoryImplementation`
+- place it into slots with `place_item`
+- do not model plates as storage collections
+
 ### 6. Keep notebooks educational
 Notebooks should demonstrate realistic usage patterns, not just toy fragments.
 

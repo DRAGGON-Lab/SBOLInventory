@@ -118,7 +118,11 @@ def make_solid_media_plate(
     slot_uri: Optional[str] = None,
     design_uri: Optional[str] = None,
 ) -> InventoryImplementation:
-    """Create a solid media plate implementation."""
+    """Create a solid media plate as an inventory implementation.
+
+    Solid media plates are physical tracked items (Implementations), not
+    storage containers. They may reference a biological design via `built`.
+    """
     x = InventoryImplementation(uri)
     x.inventory_kind = SOLID_MEDIA_PLATE
     x.built = plate_md_uri
@@ -129,11 +133,15 @@ def make_solid_media_plate(
     return x
 
 
-def add_child(parent: StorageCollection, child) -> None:
-    """Attach a storage node or inventory item to a parent collection."""
+def add_child(parent: StorageCollection, child: StorageCollection) -> None:
+    """Attach a child storage node to a parent storage collection."""
+    if not isinstance(child, StorageCollection):
+        raise TypeError(
+            "add_child only accepts StorageCollection nodes. "
+            "Use place_item(slot, item) for InventoryImplementation objects."
+        )
     parent.members.add(child.identity)
-    if isinstance(child, StorageCollection):
-        child.parent_storage = parent.identity
+    child.parent_storage = parent.identity
 
 
 def place_item(slot: StorageCollection, item: InventoryImplementation) -> None:

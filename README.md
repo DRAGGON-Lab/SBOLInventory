@@ -28,6 +28,9 @@ Those can be built later on top of this package.
 - `BacterialStock`
 - `SolidMediaPlate`
 
+All three are represented as `InventoryImplementation` (SBOL `Implementation`)
+objects. `SolidMediaPlate` is never modeled as a `Collection`.
+
 ### Storage hierarchy
 - `FridgeMinus80C`
 - `FridgeMinus20C`
@@ -35,6 +38,9 @@ Those can be built later on top of this package.
 - `Shelf`
 - `Box`
 - `Slot`
+
+All storage hierarchy nodes are represented as `StorageCollection` (SBOL
+`Collection`) objects.
 
 ## Repository structure
 
@@ -108,6 +114,42 @@ add_child(box, slot)
 place_item(slot, stock)
 
 validate_placement(stock, slot)
+```
+
+### Solid media plate example (as Implementation)
+
+```python
+from sbol_inventory import (
+    SOLID_MEDIA_PLATE,
+    make_fridge_4c,
+    make_shelf,
+    make_box,
+    make_slot,
+    make_solid_media_plate,
+    add_child,
+    place_item,
+    validate_placement,
+)
+
+fridge4 = make_fridge_4c("https://example.org/storage/4c")
+shelf4 = make_shelf("https://example.org/storage/4c/shelf1", label="Shelf 1")
+box4 = make_box("https://example.org/storage/4c/shelf1/box1", label="Box 1")
+slot4 = make_slot(
+    "https://example.org/storage/4c/shelf1/box1/P1",
+    label="P1",
+    allowed_item_kinds=[SOLID_MEDIA_PLATE],
+)
+
+plate = make_solid_media_plate(
+    uri="https://example.org/implementation/plate_001",
+    plate_md_uri="https://example.org/designs/plate_md_001",
+)
+
+add_child(fridge4, shelf4)
+add_child(shelf4, box4)
+add_child(box4, slot4)
+validate_placement(plate, slot4)
+place_item(slot4, plate)
 ```
 
 ## Design principles

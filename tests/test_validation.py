@@ -2,8 +2,11 @@ import pytest
 
 from sbol_inventory import (
     BACTERIAL_STOCK,
+    SOLID_MEDIA_PLATE,
+    InventoryImplementation,
     make_bacterial_stock,
     make_extracted_plasmid,
+    make_solid_media_plate,
     make_slot,
     validate_item,
     validate_placement,
@@ -41,3 +44,37 @@ def test_validate_placement_rejects_wrong_kind():
     )
     with pytest.raises(ValueError):
         validate_placement(item, slot)
+
+
+def test_make_solid_media_plate_returns_inventory_implementation():
+    plate = make_solid_media_plate(
+        uri="https://example.org/implementation/plate1",
+        plate_md_uri="https://example.org/designs/plate_md_1",
+    )
+    assert isinstance(plate, InventoryImplementation)
+    assert str(plate.inventory_kind) == SOLID_MEDIA_PLATE
+
+
+def test_validate_placement_accepts_solid_media_plate_when_allowed():
+    slot = make_slot(
+        "https://example.org/storage/4c/shelf1/box1/P1",
+        allowed_item_kinds=[SOLID_MEDIA_PLATE],
+    )
+    plate = make_solid_media_plate(
+        uri="https://example.org/implementation/plate2",
+        plate_md_uri="https://example.org/designs/plate_md_2",
+    )
+    validate_placement(plate, slot)
+
+
+def test_validate_placement_rejects_solid_media_plate_when_not_allowed():
+    slot = make_slot(
+        "https://example.org/storage/-80/shelf1/box1/P1",
+        allowed_item_kinds=[BACTERIAL_STOCK],
+    )
+    plate = make_solid_media_plate(
+        uri="https://example.org/implementation/plate3",
+        plate_md_uri="https://example.org/designs/plate_md_3",
+    )
+    with pytest.raises(ValueError):
+        validate_placement(plate, slot)
