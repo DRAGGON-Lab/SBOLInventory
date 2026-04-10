@@ -13,9 +13,9 @@ from .namespaces import (
     FRIDGE_4C,
     SHELF,
     BOX,
-    SLOT,
 )
 from .schema import InventoryImplementation, StorageCollection
+from .validation import validate_well_position
 
 
 def make_fridge_minus80(uri: str) -> StorageCollection:
@@ -58,38 +58,18 @@ def make_box(uri: str, label: Optional[str] = None) -> StorageCollection:
     return x
 
 
-def make_slot(
-    uri: str,
-    label: Optional[str] = None,
-    row: Optional[str] = None,
-    column: Optional[str] = None,
-    allowed_item_kinds=None,
-) -> StorageCollection:
-    x = StorageCollection(uri)
-    x.storage_kind = SLOT
-    if label:
-        x.label = label
-    if row:
-        x.row = row
-    if column:
-        x.column = column
-    if allowed_item_kinds:
-        x.allowed_item_kinds = allowed_item_kinds
-    return x
-
-
 def make_extracted_plasmid(
     uri: str,
     plasmid_cd_uri: str,
-    slot_uri: Optional[str] = None,
+    stored_at_uri: Optional[str] = None,
     design_uri: Optional[str] = None,
 ) -> InventoryImplementation:
     """Create an extracted plasmid implementation."""
     x = InventoryImplementation(uri)
     x.inventory_kind = EXTRACTED_PLASMID
     x.built = plasmid_cd_uri
-    if slot_uri:
-        x.stored_at = slot_uri
+    if stored_at_uri:
+        x.stored_at = stored_at_uri
     if design_uri:
         x.wasDerivedFroms = [design_uri]
     return x
@@ -98,15 +78,15 @@ def make_extracted_plasmid(
 def make_bacterial_stock(
     uri: str,
     strain_md_uri: str,
-    slot_uri: Optional[str] = None,
+    stored_at_uri: Optional[str] = None,
     design_uri: Optional[str] = None,
 ) -> InventoryImplementation:
     """Create a bacterial stock implementation."""
     x = InventoryImplementation(uri)
     x.inventory_kind = BACTERIAL_STOCK
     x.built = strain_md_uri
-    if slot_uri:
-        x.stored_at = slot_uri
+    if stored_at_uri:
+        x.stored_at = stored_at_uri
     if design_uri:
         x.wasDerivedFroms = [design_uri]
     return x
@@ -115,15 +95,15 @@ def make_bacterial_stock(
 def make_solid_media_plate(
     uri: str,
     plate_md_uri: str,
-    slot_uri: Optional[str] = None,
+    stored_at_uri: Optional[str] = None,
     design_uri: Optional[str] = None,
 ) -> InventoryImplementation:
     """Create a solid media plate implementation."""
     x = InventoryImplementation(uri)
     x.inventory_kind = SOLID_MEDIA_PLATE
     x.built = plate_md_uri
-    if slot_uri:
-        x.stored_at = slot_uri
+    if stored_at_uri:
+        x.stored_at = stored_at_uri
     if design_uri:
         x.wasDerivedFroms = [design_uri]
     return x
@@ -136,7 +116,38 @@ def add_child(parent: StorageCollection, child) -> None:
         child.parent_storage = parent.identity
 
 
-def place_item(slot: StorageCollection, item: InventoryImplementation) -> None:
-    """Place an inventory item into a leaf slot."""
-    slot.members.add(item.identity)
-    item.stored_at = slot.identity
+def place_in_plate(
+    plate: InventoryImplementation,
+    item: InventoryImplementation,
+    well: str,
+    *,
+    check_occupied: bool = True,
+) -> str:
+    """Place an inventory implementation into a solid media plate well."""
+    if not isinstance(plate, InventoryImplementation):
+        raise TypeError("plate must be an InventoryImplementation")
+    if str(plate.inventory_kind) != SOLID_MEDIA_PLATE:
+        raise ValueError(
+            f"plate must be a SolidMediaPlate InventoryImplementation, got {plate.inventory_kind}"
+        )
+    if not isinstance(item, InventoryImplementation):
+        raise TypeError("item must be an InventoryImplementation")
+
+    normalized_well = validate_well_position(well)
+
+    if check_occupied and getattr(plate, "doc", None):
+        for existing in plate.doc.implementations:
+            if existing.identity == item.identity:
+                continue
+            if (
+                str(getattr(existing, "contained_in_plate", "")) == str(plate.identity)
+                and str(getattr(existing, "plate_location", "")) == normalized_well
+            ):
+                raise ValueError(
+                    f"Well {normalized_well} on plate {plate.identity} is already occupied "
+                    f"by {existing.identity}"
+                )
+
+    item.contained_in_plate = plate.identity
+    item.plate_location = normalized_well
+    return normalized_well

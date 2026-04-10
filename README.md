@@ -7,8 +7,9 @@ The package wraps the core ideas in the initial prototype into a reusable librar
 - `InventoryImplementation` extends SBOL `Implementation`
 - `StorageCollection` extends SBOL `Collection`
 - factory functions create typed inventory objects and storage nodes
-- containment helpers connect freezers, shelves, boxes, slots, and stored items
-- validation helpers enforce placement rules
+- containment helpers connect freezers, shelves, boxes, and stored items
+- plate-placement helpers record well occupancy directly on placed implementations
+- validation helpers enforce placement and well rules
 
 ## Scope
 
@@ -28,13 +29,18 @@ Those can be built later on top of this package.
 - `BacterialStock`
 - `SolidMediaPlate`
 
-### Storage hierarchy
+### Storage hierarchy (Collection-based)
 - `FridgeMinus80C`
 - `FridgeMinus20C`
 - `Fridge4C`
 - `Shelf`
 - `Box`
-- `Slot`
+
+### Plate-internal occupancy
+- Plate wells are **not** first-class `Slot` objects.
+- A plated item stores:
+  - `contained_in_plate`: URI of the containing `SolidMediaPlate` implementation
+  - `plate_location`: local well text like `A1`
 
 ## Repository structure
 
@@ -76,11 +82,11 @@ from sbol_inventory import (
     make_fridge_minus80,
     make_shelf,
     make_box,
-    make_slot,
+    make_solid_media_plate,
     make_bacterial_stock,
     add_child,
-    place_item,
-    validate_placement,
+    place_in_plate,
+    validate_well_position,
 )
 
 doc = sbol.Document()
@@ -88,31 +94,32 @@ doc = sbol.Document()
 freezer = make_fridge_minus80("https://example.org/storage/-80")
 shelf = make_shelf("https://example.org/storage/-80/shelf2", label="Shelf 2")
 box = make_box("https://example.org/storage/-80/shelf2/box4", label="Box 4")
-slot = make_slot(
-    "https://example.org/storage/-80/shelf2/box4/A4",
-    label="A4",
+plate = make_solid_media_plate(
+    uri="https://example.org/implementation/plate_001",
+    plate_md_uri="https://example.org/designs/plate_md_001",
 )
 
 stock = make_bacterial_stock(
     uri="https://example.org/implementation/bstock_001",
     strain_md_uri="https://example.org/designs/strain_md_001",
-    slot_uri=slot.identity,
 )
 
-for obj in [freezer, shelf, box, slot, stock]:
+for obj in [freezer, shelf, box, plate, stock]:
     doc.add(obj)
 
 add_child(freezer, shelf)
 add_child(shelf, box)
-add_child(box, slot)
-place_item(slot, stock)
+add_child(box, plate)
+place_in_plate(plate, stock, "A4")
 
-validate_placement(stock, slot)
+assert validate_well_position("A4") == "A4"
 ```
 
 ## Design principles
 
 - Keep the storage hierarchy explicit and queryable.
+- Model external storage hierarchy as `Collection` objects.
+- Model plate wells as relative metadata (`contained_in_plate` + `plate_location`) on placed implementations.
 - Use SBOL-native top-level objects where possible.
 - Keep the package small and composable so it can become a backend dependency later.
 - Favor deterministic helper functions over framework-heavy abstractions.
