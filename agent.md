@@ -23,15 +23,16 @@ Treat these files as the primary planning documents:
 When code and docs diverge, update the docs in the same change.
 
 ## Current package intent
-The initial implementation should preserve the core behavior of the prototype:
+The current implementation should preserve the core behavior while using the plate placement refactor:
 
 - custom `InventoryImplementation`
 - custom `StorageCollection`
 - controlled vocabulary constants
-- storage factories
+- storage factories for freezers/shelves/boxes
 - implementation factories
 - containment helpers
-- placement validation
+- plate placement helper (`place_in_plate`) using well strings
+- well validation (`validate_well_position`)
 
 ## Repository rules
 
@@ -48,8 +49,8 @@ unless explicitly requested.
 ### 2. Prefer explicit, domain-specific names
 Good:
 - `make_bacterial_stock`
-- `validate_placement`
-- `StorageCollection`
+- `place_in_plate`
+- `validate_well_position`
 
 Avoid vague names like:
 - `build_object`
@@ -66,46 +67,9 @@ Before adding a new abstraction, ask whether a simple function would be clearer.
 When changing the domain model, add or update tests.
 At minimum, verify:
 - object creation
-- allowed placement
-- rejected placement
+- accepted plate placements
+- rejected invalid wells
+- rejected duplicate occupancy (when document context is available)
 
 ### 6. Keep notebooks educational
 Notebooks should demonstrate realistic usage patterns, not just toy fragments.
-
-## Coding standards
-
-### Python
-- use type hints where practical
-- write docstrings on public functions and classes
-- keep logic readable and flat
-- prefer deterministic behavior
-
-### Packaging
-- keep the package installable with `pip install -e .`
-- avoid pinning dependencies too tightly unless necessary
-
-### Documentation
-- update the README when user-facing behavior changes
-- explain design rationale, not just APIs
-
-## Preferred development sequence
-When asked to add features, follow this order:
-
-1. update or confirm the product requirement
-2. implement the smallest coherent code change
-3. add tests
-4. update docs
-5. update notebook examples if relevant
-
-## Good first improvements
-Reasonable next tasks for this repository:
-- strengthen `validate_item`
-- add serialization helpers
-- improve round-trip examples
-- add CI workflow
-- publish package metadata more completely
-
-## Avoid
-- speculative architecture
-- unnecessary inheritance layers
-- mixing future server concerns into the package

@@ -20,40 +20,31 @@ Contains:
 - controlled terms for inventory kinds
 - controlled terms for storage kinds
 
-This module is the single source of truth for vocabulary constants.
-
 ### `schema.py`
-Contains the extension-aware object definitions:
+Contains extension-aware object definitions:
 
 - `InventoryImplementation`
 - `StorageCollection`
 
-Responsibilities:
-- define extension properties
-- register extension classes with pySBOL2
-- keep the object model close to the prototype
+`InventoryImplementation` carries both:
+- high-level storage pointer: `stored_at`
+- plate-internal placement metadata:
+  - `contained_in_plate`
+  - `plate_location`
 
 ### `factories.py`
-Contains the construction helpers for domain objects:
+Contains construction helpers for domain objects:
 
-- storage factories
-- implementation factories
-- containment helpers
-
-Responsibilities:
-- expose a concise API for creating typed objects
-- reduce repeated boilerplate in user code
-- keep client code readable
+- storage factories (`make_fridge_*`, `make_shelf`, `make_box`)
+- implementation factories (`make_*_stock`, `make_solid_media_plate`)
+- containment helpers (`add_child`)
+- plate placement helper (`place_in_plate`)
 
 ### `validation.py`
 Contains semantic validation utilities:
 
-- validate an individual item
-- validate a placement relationship
-
-Responsibilities:
-- capture application rules without mixing them into constructors
-- provide a clear extension point for stronger validation later
+- validate an individual item (`validate_item`)
+- validate 96-well coordinates (`validate_well_position`)
 
 ### `document.py`
 Contains helpers for document-level operations such as:
@@ -62,39 +53,15 @@ Contains helpers for document-level operations such as:
 - bulk addition of top-level objects
 - writing SBOL to disk
 
-Responsibilities:
-- avoid repeating common document assembly logic in notebooks and downstream services
-
 ## Design rationale
 
 ### Why extend `Implementation`
-`Implementation` is the right semantic anchor for a physical realization of a design. The package preserves that meaning while adding inventory-specific annotations such as:
+`Implementation` is the right semantic anchor for a physical realization of a design.
 
-- `inventory_kind`
-- `stored_at`
-- `barcode`
-- `lot_id`
-- `notes`
-- `freeze_date`
-
-### Why extend `Collection`
-The storage system is naturally hierarchical and grouping-oriented. `Collection` is therefore a good fit for representing:
-
-- freezers
-- shelves
-- boxes
-- slots
-
-That keeps the storage layout explicit without inventing a second containment mechanism.
-
-### Why keep validation separate
-Constructors should create objects.
-Validators should enforce policy.
-
-This separation makes the package easier to reuse, test, and evolve. A future backend may choose to:
-- reject invalid placements immediately
-- warn but still create drafts
-- apply additional project-specific policies
+### Why split external storage vs plate occupancy
+External containers (fridges/shelves/boxes) are naturally modeled as `Collection` hierarchy.
+Plate wells are not reusable global storage nodes; they are coordinates local to one physical plate.
+Therefore, plate placement is stored directly on the contained implementation.
 
 ## Dependency flow
 
@@ -103,23 +70,21 @@ namespaces -> schema -> factories -> validation
                       \-> document
 ```
 
-The intended flow is one-way and simple. Higher-level modules import lower-level modules. Lower-level modules do not depend on higher-level orchestration logic.
-
 ## Example object graph
 
 ```text
-FridgeMinus80C
-└── Shelf
-    └── Box
-        └── Slot
-            └── BacterialStock
+Fridge4C (Collection)
+└── Shelf (Collection)
+    └── Box (Collection)
+        └── SolidMediaPlate (Implementation)
+
+BacterialStock implementation:
+  contained_in_plate = <plate URI>
+  plate_location     = "A1"
 ```
 
 ## Future evolution
-Likely future additions:
 
-- richer validation against actual `built` object type
-- serialization helpers beyond RDF/XML
-- support for attachment metadata
-- SynBioHub submission adapters
-- richer querying utilities
+- optional dedicated kinds for plated material (`PLATED_STRAIN`, `PLATED_CULTURE`)
+- richer validation of built-object categories
+- query helpers for occupancy maps and plate summaries

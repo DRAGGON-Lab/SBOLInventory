@@ -7,8 +7,9 @@ The package wraps the core ideas in the initial prototype into a reusable librar
 - `InventoryImplementation` extends SBOL `Implementation`
 - `StorageCollection` extends SBOL `Collection`
 - factory functions create typed inventory objects and storage nodes
-- containment helpers connect freezers, shelves, boxes, slots, and stored items
-- validation helpers enforce placement rules
+- containment helpers connect freezers, shelves, boxes, and stored items
+- **plate occupancy is captured directly on the contained item** using plate-relative well metadata
+- validation helpers enforce item and well rules
 
 ## Scope
 
@@ -18,8 +19,6 @@ This repository is intentionally focused on **SBOL manipulation only**. It does 
 - a frontend
 - SynBioHub authentication flows
 - machine learning
-
-Those can be built later on top of this package.
 
 ## Domain model
 
@@ -34,31 +33,18 @@ Those can be built later on top of this package.
 - `Fridge4C`
 - `Shelf`
 - `Box`
-- `Slot`
 
-## Repository structure
+## Storage vs plate placement
 
-```text
-SBOLInventory/
-├── README.md
-├── product.md
-├── architechture.md
-├── agent.md
-├── pyproject.toml
-├── .gitignore
-├── src/
-│   └── sbol_inventory/
-│       ├── __init__.py
-│       ├── namespaces.py
-│       ├── schema.py
-│       ├── factories.py
-│       ├── validation.py
-│       └── document.py
-├── tests/
-│   └── test_validation.py
-└── notebooks/
-    └── sbol_inventory_examples.ipynb
-```
+External storage and plate-internal occupancy are modeled differently:
+
+- **External storage** (fridge/shelf/box) uses `StorageCollection` hierarchy via `members` and `stored_at`.
+- **Plate-internal occupancy** does **not** use `Slot` objects.
+- A plated sample records:
+  - `contained_in_plate = <plate implementation URI>`
+  - `plate_location = "A1"`
+
+Well coordinates are therefore scoped to a specific plate.
 
 ## Installation
 
@@ -71,57 +57,47 @@ pip install -e .
 ## Quick example
 
 ```python
-import sbol2 as sbol
 from sbol_inventory import (
-    make_fridge_minus80,
-    make_shelf,
-    make_box,
-    make_slot,
+    make_document,
+    make_solid_media_plate,
     make_bacterial_stock,
-    add_child,
-    place_item,
-    validate_placement,
+    place_in_plate,
+    validate_well_position,
 )
 
-doc = sbol.Document()
-
-freezer = make_fridge_minus80("https://example.org/storage/-80")
-shelf = make_shelf("https://example.org/storage/-80/shelf2", label="Shelf 2")
-box = make_box("https://example.org/storage/-80/shelf2/box4", label="Box 4")
-slot = make_slot(
-    "https://example.org/storage/-80/shelf2/box4/A4",
-    label="A4",
+# 1) Physical plate implementation (built from a plate ModuleDefinition)
+plate = make_solid_media_plate(
+    uri="https://example.org/implementation/plate_001",
+    plate_md_uri="https://example.org/designs/solid_plate_design",
 )
 
-stock = make_bacterial_stock(
-    uri="https://example.org/implementation/bstock_001",
+# 2) Physical sample implementation (built from a strain ModuleDefinition)
+sample = make_bacterial_stock(
+    uri="https://example.org/implementation/plated_strain_001",
     strain_md_uri="https://example.org/designs/strain_md_001",
-    slot_uri=slot.identity,
 )
 
-for obj in [freezer, shelf, box, slot, stock]:
-    doc.add(obj)
+# 3) Place the physical sample into a plate well
+place_in_plate(plate, sample, "A1")
 
-add_child(freezer, shelf)
-add_child(shelf, box)
-add_child(box, slot)
-place_item(slot, stock)
+assert str(sample.contained_in_plate) == str(plate.identity)
+assert str(sample.plate_location) == "A1"
 
-validate_placement(stock, slot)
+# 4) Validate wells
+validate_well_position("H12")  # valid
+# validate_well_position("Z99")  # raises ValueError
 ```
 
 ## Design principles
 
-- Keep the storage hierarchy explicit and queryable.
+- Keep storage hierarchy explicit and queryable.
+- Keep plate wells as simple validated coordinates, not first-class storage objects.
 - Use SBOL-native top-level objects where possible.
 - Keep the package small and composable so it can become a backend dependency later.
-- Favor deterministic helper functions over framework-heavy abstractions.
 
 ## Next steps
 
-Recommended follow-on work after this repository is stable:
-
-1. add serialization helpers and round-trip parsing examples
-2. add stronger semantic validation
+1. add richer built-type checks (e.g., enforce expected design categories)
+2. add optional inventory kind(s) for plated material (`PLATED_STRAIN`/`PLATED_CULTURE`)
 3. add CI and packaging release workflow
 4. integrate into a service that submits to SynBioHub

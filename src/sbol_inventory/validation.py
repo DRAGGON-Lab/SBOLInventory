@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import re
+
 from .namespaces import EXTRACTED_PLASMID, BACTERIAL_STOCK, SOLID_MEDIA_PLATE
-from .schema import InventoryImplementation, StorageCollection
+from .schema import InventoryImplementation
 
 
 KNOWN_KINDS = {EXTRACTED_PLASMID, BACTERIAL_STOCK, SOLID_MEDIA_PLATE}
+WELL_96_PATTERN = re.compile(r"^[A-H](?:[1-9]|1[0-2])$")
 
 
 def validate_item(item: InventoryImplementation) -> None:
@@ -20,11 +23,11 @@ def validate_item(item: InventoryImplementation) -> None:
         raise ValueError(f"{item.identity} is missing a built reference")
 
 
-def validate_placement(item: InventoryImplementation, slot: StorageCollection) -> None:
-    """Validate whether an item is allowed to be placed in a slot."""
-    allowed = set(slot.allowed_item_kinds)
-    if allowed and str(item.inventory_kind) not in allowed:
+def validate_well_position(well: str) -> str:
+    """Validate and normalize a 96-well plate coordinate (A1-H12)."""
+    normalized = well.strip().upper()
+    if not WELL_96_PATTERN.fullmatch(normalized):
         raise ValueError(
-            f"{item.identity} of kind {item.inventory_kind} "
-            f"is not allowed in slot {slot.identity}"
+            f"Invalid 96-well position '{well}'. Expected rows A-H and columns 1-12."
         )
+    return normalized

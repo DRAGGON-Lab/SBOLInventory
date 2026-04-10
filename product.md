@@ -9,12 +9,7 @@ SBOLInventory provides a clean Python API for modeling laboratory inventory in S
 ## Problem
 Laboratories often have a digital design representation, but the physical realization of those designs is tracked outside the design graph, often in spreadsheets or ad hoc notes.
 
-SBOL already includes `Implementation` as the concept for physical realization, but practical laboratory inventory tracking needs more structure than the base class provides. We need a reusable software layer that can:
-
-- represent implementation type
-- capture storage location
-- organize storage containers hierarchically
-- validate whether an item is placed in an allowed storage location
+SBOL already includes `Implementation` as the concept for physical realization, but practical laboratory inventory tracking needs more structure than the base class provides.
 
 ## Users
 Primary users:
@@ -25,7 +20,7 @@ Primary users:
 - researchers building physical sample tracking pipelines
 
 ## MVP
-The first release of SBOLInventory should support:
+The package supports:
 
 - custom SBOL extension-aware classes for inventory objects and storage collections
 - controlled vocabulary constants for item and storage kinds
@@ -38,20 +33,10 @@ The first release of SBOLInventory should support:
   - `Fridge4C`
   - `Shelf`
   - `Box`
-  - `Slot`
-- placement validation
+- plate placement helper: `place_in_plate(plate, item, well)`
+- well validation for 96-well coordinates (`A1`-`H12`)
 - basic document assembly
 - example notebook demonstrating common workflows
-
-## Non-goals
-This repository should not initially include:
-
-- SynBioHub login and submission code
-- HTTP APIs
-- database persistence
-- machine learning
-- image attachment handling
-- frontend code
 
 ## Functional requirements
 
@@ -66,28 +51,27 @@ The package must support creation of storage nodes for:
 - freezer or fridge
 - shelf
 - box
-- slot
 
 ### FR3: containment modeling
 The package must support representing:
 - freezer contains shelf
 - shelf contains box
-- box contains slot
-- slot contains item
+- box contains item
+- plate contains item by metadata on the item (`contained_in_plate`, `plate_location`)
 
 ### FR4: placement validation
 The package must support application-level validation rules:
 - extracted plasmids go to -20 C
 - bacterial stocks go to -80 C
 - solid media plates go to 4 C storage
+- plate wells are restricted to valid 96-well coordinates
 
 ### FR5: examples
 The repository must include examples that are easy for humans and AI coding agents to execute and extend.
 
-## Quality goals
-- simple API
-- explicit naming
-- low cognitive load
-- easy import into a future backend service
-- easily testable
-- faithful to the intended inventory model
+## Semantics
+
+- A `ModuleDefinition` is a design.
+- A physical thing in inventory is an `InventoryImplementation`.
+- Placing a strain in a plate means placing an implementation whose `built` points to the strain `ModuleDefinition`.
+- Well coordinates are not global identifiers; they are meaningful only in context of a parent plate.
