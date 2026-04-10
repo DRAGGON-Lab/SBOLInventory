@@ -10,7 +10,6 @@ from .namespaces import (
     FRIDGE_4C,
     SHELF,
     BOX,
-    SLOT,
 )
 from .schema import InventoryImplementation, StorageCollection, register_extensions
 from .factories import (
@@ -19,14 +18,19 @@ from .factories import (
     make_fridge_4c,
     make_shelf,
     make_box,
-    make_slot,
     make_extracted_plasmid,
     make_bacterial_stock,
     make_solid_media_plate,
     add_child,
     place_item,
+    place_in_plate,
 )
-from .validation import validate_item, validate_placement
+from .validation import (
+    validate_item,
+    validate_placement,
+    validate_well_position,
+    validate_plate_and_item,
+)
 from .document import make_document, add_all, write_rdfxml
 
 __all__ = [
@@ -39,7 +43,6 @@ __all__ = [
     "FRIDGE_4C",
     "SHELF",
     "BOX",
-    "SLOT",
     "InventoryImplementation",
     "StorageCollection",
     "register_extensions",
@@ -48,14 +51,16 @@ __all__ = [
     "make_fridge_4c",
     "make_shelf",
     "make_box",
-    "make_slot",
     "make_extracted_plasmid",
     "make_bacterial_stock",
     "make_solid_media_plate",
     "add_child",
     "place_item",
+    "place_in_plate",
     "validate_item",
     "validate_placement",
+    "validate_well_position",
+    "validate_plate_and_item",
     "make_document",
     "add_all",
     "write_rdfxml",

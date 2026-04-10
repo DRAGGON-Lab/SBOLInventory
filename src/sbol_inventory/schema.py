@@ -22,6 +22,12 @@ class InventoryImplementation(sbol.Implementation):
         self.stored_at = sbol.ReferencedObject(
             self, EX + "storedAt", SBOL_COLLECTION, 0, 1, []
         )
+        self.contained_in_plate = sbol.ReferencedObject(
+            self, EX + "containedInPlate", SBOL_IMPLEMENTATION, 0, 1, []
+        )
+        self.plate_location = sbol.TextProperty(
+            self, EX + "plateLocation", 0, 1, []
+        )
         self.barcode = sbol.TextProperty(
             self, EX + "barcode", 0, 1, []
         )

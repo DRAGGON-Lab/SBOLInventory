@@ -23,15 +23,10 @@ Treat these files as the primary planning documents:
 When code and docs diverge, update the docs in the same change.
 
 ## Current package intent
-The initial implementation should preserve the core behavior of the prototype:
+The implementation preserves core behavior while distinguishing:
 
-- custom `InventoryImplementation`
-- custom `StorageCollection`
-- controlled vocabulary constants
-- storage factories
-- implementation factories
-- containment helpers
-- placement validation
+- collection-based external storage hierarchy (freezer/fridge/shelf/box)
+- implementation-based plate occupancy (`contained_in_plate`, `plate_location`)
 
 ## Repository rules
 
@@ -50,6 +45,7 @@ Good:
 - `make_bacterial_stock`
 - `validate_placement`
 - `StorageCollection`
+- `place_in_plate`
 
 Avoid vague names like:
 - `build_object`
@@ -68,6 +64,7 @@ At minimum, verify:
 - object creation
 - allowed placement
 - rejected placement
+- well coordinate validation for plate placement
 
 ### 6. Keep notebooks educational
 Notebooks should demonstrate realistic usage patterns, not just toy fragments.
