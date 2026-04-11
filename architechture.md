@@ -1,132 +1,44 @@
 # Architechture
 
-## Overview
-SBOLInventory is a small Python library organized around four layers:
-
-1. **namespaces**
-2. **schema**
-3. **factories**
-4. **validation**
-
-An additional lightweight **document** helper module keeps common document assembly tasks centralized.
-
-## Module structure
-
-### `namespaces.py`
-Contains:
-
-- extension namespace URI
-- SBOL class URIs
-- controlled terms for inventory kinds
-- controlled terms for storage kinds
-
-This module is the single source of truth for vocabulary constants.
-
-### `schema.py`
-Contains the extension-aware object definitions:
-
-- `InventoryImplementation`
-- `StorageCollection`
-
-Responsibilities:
-- define extension properties
-- register extension classes with pySBOL2
-- keep the object model close to the prototype
-
-### `factories.py`
-Contains the construction helpers for domain objects:
-
-- storage factories
-- implementation factories
-- containment helpers
-- plate placement helper (`place_in_plate`)
-
-Responsibilities:
-- expose a concise API for creating typed objects
-- reduce repeated boilerplate in user code
-- keep client code readable
-
-### `validation.py`
-Contains semantic validation utilities:
-
-- validate an individual item
-- validate a storage placement relationship
-- validate a 96-well coordinate
-
-Responsibilities:
-- capture application rules without mixing them into constructors
-- provide a clear extension point for stronger validation later
-
-### `document.py`
-Contains helpers for document-level operations such as:
-
-- document creation
-- bulk addition of top-level objects
-- writing SBOL to disk
-
-Responsibilities:
-- avoid repeating common document assembly logic in notebooks and downstream services
-
-## Design rationale
-
-### Why extend `Implementation`
-`Implementation` is the right semantic anchor for a physical realization of a design. The package preserves that meaning while adding inventory-specific annotations such as:
-
-- `inventory_kind`
-- `stored_at`
-- `contained_in_plate`
-- `plate_location`
-- `barcode`
-- `lot_id`
-- `notes`
-- `freeze_date`
-
-### Why extend `Collection`
-The external storage system is naturally hierarchical and grouping-oriented. `Collection` is therefore a good fit for representing:
-
-- freezers
-- shelves
-- boxes
-
-Plate wells are **not** modeled as `Collection` objects. Well coordinates are meaningful only relative to a specific plate implementation.
-
-### Why keep validation separate
-Constructors should create objects.
-Validators should enforce policy.
-
-This separation makes the package easier to reuse, test, and evolve. A future backend may choose to:
-- reject invalid placements immediately
-- warn but still create drafts
-- apply additional project-specific policies
-
-## Dependency flow
+## Core architecture
 
 ```text
-namespaces -> schema -> factories -> validation
-                      \-> document
+StorageCollection layer
+  FridgeMinus80C / FridgeMinus20C / Fridge4C / Shelf
+
+InventoryImplementation layer
+  Box / SolidMediaPlate / BacterialStock / DilutedPlasmid / ProcuredMaterial / PlatedStrain
 ```
 
-The intended flow is one-way and simple. Higher-level modules import lower-level modules. Lower-level modules do not depend on higher-level orchestration logic.
-
-## Example object graph
+## Object graph
 
 ```text
 Fridge4C (Collection)
 └── Shelf (Collection)
-    └── Box (Collection)
-        └── SolidMediaPlate (Implementation)
+      └── SolidMediaPlate (Implementation)
+            └── PlatedStrain (Implementation)
 
-BacterialStock (Implementation)
-  contained_in_plate -> SolidMediaPlate
-  plate_location -> "A1"
+FridgeMinus80C (Collection)
+└── Shelf (Collection)
+      └── Box (Implementation)
+            └── BacterialStock (Implementation)
+            └── ProcuredMaterial (Implementation)
+
+FridgeMinus20C (Collection)
+└── Shelf (Collection)
+      └── Box (Implementation)
+            └── DilutedPlasmid (Implementation)
+            └── ProcuredMaterial (Implementation)
 ```
 
-## Future evolution
-Likely future additions:
+## Placement model
 
-- dedicated kind for plated material (e.g., `PLATED_STRAIN`)
-- richer validation against actual `built` object type
-- serialization helpers beyond RDF/XML
-- support for attachment metadata
-- SynBioHub submission adapters
-- richer querying utilities
+- Container implementations (`Box`, `SolidMediaPlate`) define allowed coordinates via:
+  - `allowed_rows`
+  - `allowed_columns`
+- Placed implementations record:
+  - `contained_in_implementation`
+  - `container_row`
+  - `container_column`
+- Occupancy checks prevent duplicate active items in the same coordinate.
+- Lifecycle management uses `active` state (`"true"` / `"false"`).

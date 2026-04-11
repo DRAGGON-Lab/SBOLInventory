@@ -2,14 +2,29 @@
 
 from __future__ import annotations
 
-import re
-
-from .namespaces import EXTRACTED_PLASMID, BACTERIAL_STOCK, SOLID_MEDIA_PLATE
+from .namespaces import (
+    BACTERIAL_STOCK,
+    BOX,
+    DILUTED_PLASMID,
+    PLATED_STRAIN,
+    PROCURED_MATERIAL,
+    SOLID_MEDIA_PLATE,
+)
 from .schema import InventoryImplementation, StorageCollection
 
 
-KNOWN_KINDS = {EXTRACTED_PLASMID, BACTERIAL_STOCK, SOLID_MEDIA_PLATE}
-WELL_96_RE = re.compile(r"^[A-H](?:[1-9]|1[0-2])$")
+KNOWN_KINDS = {
+    DILUTED_PLASMID,
+    BACTERIAL_STOCK,
+    SOLID_MEDIA_PLATE,
+    BOX,
+    PROCURED_MATERIAL,
+    PLATED_STRAIN,
+}
+
+VALID_ROWS = tuple("ABCDEFGH")
+VALID_COLUMNS = tuple(range(1, 13))
+CONTAINER_KINDS = {SOLID_MEDIA_PLATE, BOX}
 
 
 def validate_item(item: InventoryImplementation) -> None:
@@ -33,28 +48,65 @@ def validate_placement(item: InventoryImplementation, storage: StorageCollection
         )
 
 
-def validate_well_position(well: str) -> str:
-    """Validate and normalize a 96-well location (A1-H12)."""
-    if not isinstance(well, str):
-        raise ValueError("Well must be provided as a string like 'A1'")
+def validate_row_column(row: str, column: int) -> tuple[str, int]:
+    """Validate and normalize a row/column pair for a 96-position container."""
+    if not isinstance(row, str):
+        raise ValueError("Row must be a string from A to H")
 
-    normalized = well.strip().upper()
-    if not WELL_96_RE.match(normalized):
+    normalized_row = row.strip().upper()
+    if normalized_row not in VALID_ROWS:
+        raise ValueError(f"Invalid row '{row}'. Expected one of A-H")
+
+    if not isinstance(column, int):
+        raise ValueError("Column must be an integer from 1 to 12")
+
+    if column not in VALID_COLUMNS:
+        raise ValueError(f"Invalid column '{column}'. Expected one of 1-12")
+
+    return normalized_row, column
+
+
+def validate_container(container: InventoryImplementation) -> None:
+    """Validate a target implementation is a supported placement container."""
+    if not isinstance(container, InventoryImplementation):
+        raise ValueError("Container must be an InventoryImplementation")
+
+    if str(container.inventory_kind) not in CONTAINER_KINDS:
         raise ValueError(
-            f"Invalid 96-well position '{well}'. Expected rows A-H and columns 1-12."
+            "Container must be a SolidMediaPlate or Box implementation"
         )
 
-    return normalized
 
+def validate_container_position(
+    container: InventoryImplementation,
+    row: str,
+    column: int,
+) -> tuple[str, int]:
+    """Validate a row/column value against container constraints."""
+    normalized_row, normalized_column = validate_row_column(row, column)
 
-def validate_plate_and_item(plate: InventoryImplementation, item: InventoryImplementation) -> None:
-    """Validate types for plate placement semantics."""
-    if not isinstance(plate, InventoryImplementation):
-        raise ValueError("Plate must be an InventoryImplementation")
-    if not isinstance(item, InventoryImplementation):
-        raise ValueError("Item must be an InventoryImplementation")
+    allowed_rows = {str(x).upper() for x in container.allowed_rows}
+    allowed_columns = {int(x) for x in container.allowed_columns}
 
-    if str(plate.inventory_kind) != SOLID_MEDIA_PLATE:
+    if not allowed_rows or not allowed_columns:
         raise ValueError(
-            f"Plate {plate.identity} must have inventory kind SolidMediaPlate"
+            f"Container {container.identity} is missing allowed_rows or allowed_columns"
         )
+
+    if normalized_row not in allowed_rows:
+        raise ValueError(
+            f"Row {normalized_row} is not allowed for container {container.identity}"
+        )
+
+    if normalized_column not in allowed_columns:
+        raise ValueError(
+            f"Column {normalized_column} is not allowed for container {container.identity}"
+        )
+
+    return normalized_row, normalized_column
+
+
+def is_active(item: InventoryImplementation) -> bool:
+    """Return whether an implementation is active (default True when unset)."""
+    value = str(item.active).lower().strip() if item.active else "true"
+    return value == "true"

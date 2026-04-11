@@ -22,11 +22,23 @@ class InventoryImplementation(sbol.Implementation):
         self.stored_at = sbol.ReferencedObject(
             self, EX + "storedAt", SBOL_COLLECTION, 0, 1, []
         )
-        self.contained_in_plate = sbol.ReferencedObject(
-            self, EX + "containedInPlate", SBOL_IMPLEMENTATION, 0, 1, []
+        self.contained_in_implementation = sbol.ReferencedObject(
+            self, EX + "containedInImplementation", SBOL_IMPLEMENTATION, 0, 1, []
         )
-        self.plate_location = sbol.TextProperty(
-            self, EX + "plateLocation", 0, 1, []
+        self.container_row = sbol.TextProperty(
+            self, EX + "containerRow", 0, 1, []
+        )
+        self.container_column = sbol.IntProperty(
+            self, EX + "containerColumn", 0, 1, []
+        )
+        self.allowed_rows = sbol.TextProperty(
+            self, EX + "allowedRow", 0, math.inf, []
+        )
+        self.allowed_columns = sbol.IntProperty(
+            self, EX + "allowedColumn", 0, math.inf, []
+        )
+        self.active = sbol.TextProperty(
+            self, EX + "active", 0, 1, []
         )
         self.barcode = sbol.TextProperty(
             self, EX + "barcode", 0, 1, []
@@ -59,12 +71,6 @@ class StorageCollection(sbol.Collection):
         )
         self.label = sbol.TextProperty(
             self, EX + "label", 0, 1, []
-        )
-        self.row = sbol.TextProperty(
-            self, EX + "row", 0, 1, []
-        )
-        self.column = sbol.TextProperty(
-            self, EX + "column", 0, 1, []
         )
         self.allowed_item_kinds = sbol.URIProperty(
             self, EX + "allowedItemKind", 0, math.inf, []
