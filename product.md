@@ -14,6 +14,7 @@ SBOL already includes `Implementation` as the concept for physical realization, 
 - represent implementation type
 - capture storage location
 - organize storage containers hierarchically
+- model plate-internal occupancy by scoped well metadata (`contained_in_plate`, `plate_location`)
 - validate whether an item is placed in an allowed storage location
 
 ## Users
@@ -38,8 +39,7 @@ The first release of SBOLInventory should support:
   - `Fridge4C`
   - `Shelf`
   - `Box`
-  - `Slot`
-- placement validation
+- plate placement helper with 96-well validation
 - basic document assembly
 - example notebook demonstrating common workflows
 
@@ -66,20 +66,20 @@ The package must support creation of storage nodes for:
 - freezer or fridge
 - shelf
 - box
-- slot
 
 ### FR3: containment modeling
 The package must support representing:
 - freezer contains shelf
 - shelf contains box
-- box contains slot
-- slot contains item
+- box contains items
+- plate contains plated implementations via `contained_in_plate` + `plate_location`
 
 ### FR4: placement validation
 The package must support application-level validation rules:
 - extracted plasmids go to -20 C
 - bacterial stocks go to -80 C
 - solid media plates go to 4 C storage
+- plate wells are limited to A-H and 1-12
 
 ### FR5: examples
 The repository must include examples that are easy for humans and AI coding agents to execute and extend.

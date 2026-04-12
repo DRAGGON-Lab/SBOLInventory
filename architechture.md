@@ -39,6 +39,7 @@ Contains the construction helpers for domain objects:
 - storage factories
 - implementation factories
 - containment helpers
+- plate placement helper (`place_in_plate`)
 
 Responsibilities:
 - expose a concise API for creating typed objects
@@ -49,7 +50,8 @@ Responsibilities:
 Contains semantic validation utilities:
 
 - validate an individual item
-- validate a placement relationship
+- validate a storage placement relationship
+- validate a 96-well coordinate
 
 Responsibilities:
 - capture application rules without mixing them into constructors
@@ -72,20 +74,21 @@ Responsibilities:
 
 - `inventory_kind`
 - `stored_at`
+- `contained_in_plate`
+- `plate_location`
 - `barcode`
 - `lot_id`
 - `notes`
 - `freeze_date`
 
 ### Why extend `Collection`
-The storage system is naturally hierarchical and grouping-oriented. `Collection` is therefore a good fit for representing:
+The external storage system is naturally hierarchical and grouping-oriented. `Collection` is therefore a good fit for representing:
 
 - freezers
 - shelves
 - boxes
-- slots
 
-That keeps the storage layout explicit without inventing a second containment mechanism.
+Plate wells are **not** modeled as `Collection` objects. Well coordinates are meaningful only relative to a specific plate implementation.
 
 ### Why keep validation separate
 Constructors should create objects.
@@ -108,16 +111,20 @@ The intended flow is one-way and simple. Higher-level modules import lower-level
 ## Example object graph
 
 ```text
-FridgeMinus80C
-└── Shelf
-    └── Box
-        └── Slot
-            └── BacterialStock
+Fridge4C (Collection)
+└── Shelf (Collection)
+    └── Box (Collection)
+        └── SolidMediaPlate (Implementation)
+
+BacterialStock (Implementation)
+  contained_in_plate -> SolidMediaPlate
+  plate_location -> "A1"
 ```
 
 ## Future evolution
 Likely future additions:
 
+- dedicated kind for plated material (e.g., `PLATED_STRAIN`)
 - richer validation against actual `built` object type
 - serialization helpers beyond RDF/XML
 - support for attachment metadata
