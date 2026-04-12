@@ -2,42 +2,180 @@ import pytest
 
 from sbol_inventory import (
     BACTERIAL_STOCK,
+    BOX,
+    DILUTED_PLASMID,
+    SOLID_MEDIA_PLATE,
+    InventoryImplementation,
+    add_all,
+    discard_implementation,
     make_bacterial_stock,
-    make_extracted_plasmid,
-    make_slot,
+    make_box,
+    make_diluted_plasmid,
+    make_document,
+    make_plated_strain,
+    make_procured_material,
+    make_shelf,
+    make_solid_media_plate,
+    move_item,
+    place_in_container,
+    remove_from_container,
+    validate_container_position,
     validate_item,
     validate_placement,
 )
 
 
-def test_validate_item_accepts_known_kind_with_built():
-    item = make_bacterial_stock(
-        uri="https://example.org/implementation/stock1",
-        strain_md_uri="https://example.org/designs/strain1",
+def test_validate_item_accepts_new_kinds_with_built():
+    item = make_diluted_plasmid(
+        uri="https://example.org/implementation/plasmid1",
+        plasmid_cd_uri="https://example.org/designs/plasmid1",
     )
     validate_item(item)
 
 
-def test_validate_placement_accepts_allowed_kind():
-    slot = make_slot(
-        "https://example.org/storage/-80/shelf1/box1/A1",
-        allowed_item_kinds=[BACTERIAL_STOCK],
+def test_box_and_plate_are_inventory_implementations():
+    box = make_box(
+        uri="https://example.org/implementation/box1",
+        box_md_uri="https://example.org/designs/box_md",
+        rows=["A", "B"],
+        columns=[1, 2, 3],
     )
-    item = make_bacterial_stock(
+    plate = make_solid_media_plate(
+        uri="https://example.org/implementation/plate1",
+        plate_md_uri="https://example.org/designs/plate_md",
+        rows=["A", "B"],
+        columns=[1, 2, 3],
+    )
+    assert isinstance(box, InventoryImplementation)
+    assert isinstance(plate, InventoryImplementation)
+    assert str(box.inventory_kind) == BOX
+    assert str(plate.inventory_kind) == SOLID_MEDIA_PLATE
+
+
+def test_validate_placement_storage_rules_for_shelf():
+    shelf = make_shelf("https://example.org/storage/4C/shelf1")
+    shelf.allowed_item_kinds = [SOLID_MEDIA_PLATE]
+    plate = make_solid_media_plate(
+        uri="https://example.org/implementation/plate1",
+        plate_md_uri="https://example.org/designs/plate_md",
+        rows=["A", "B"],
+        columns=[1, 2],
+    )
+    validate_placement(plate, shelf)
+
+
+@pytest.mark.parametrize(
+    "row,column",
+    [("A", 1), ("B", 3)],
+)
+def test_validate_container_position_accepts_allowed(row, column):
+    box = make_box(
+        uri="https://example.org/implementation/box1",
+        box_md_uri="https://example.org/designs/box_md",
+        rows=["A", "B"],
+        columns=[1, 2, 3],
+    )
+    assert validate_container_position(box, row=row, column=column) == (row, column)
+
+
+@pytest.mark.parametrize(
+    "row,column",
+    [("C", 1), ("A", 99), ("", 1)],
+)
+def test_validate_container_position_rejects_invalid(row, column):
+    box = make_box(
+        uri="https://example.org/implementation/box1",
+        box_md_uri="https://example.org/designs/box_md",
+        rows=["A", "B"],
+        columns=[1, 2, 3],
+    )
+    with pytest.raises(ValueError):
+        validate_container_position(box, row=row, column=column)
+
+
+def test_place_in_container_records_reference_and_position():
+    plate = make_solid_media_plate(
+        uri="https://example.org/implementation/plate1",
+        plate_md_uri="https://example.org/designs/plate_md",
+        rows=["A", "B"],
+        columns=[1, 2, 3],
+    )
+    plated_strain = make_plated_strain(
+        uri="https://example.org/implementation/plated1",
+        strain_md_uri="https://example.org/designs/strain_md",
+    )
+
+    place_in_container(plate, plated_strain, row="A", column=1)
+
+    assert str(plated_strain.contained_in_container) == str(plate.identity)
+    assert str(plated_strain.container_row) == "A"
+    assert int(plated_strain.container_column) == 1
+
+
+def test_duplicate_occupancy_is_rejected_in_same_document():
+    doc = make_document()
+    box = make_box(
+        uri="https://example.org/implementation/box1",
+        box_md_uri="https://example.org/designs/box_md",
+        rows=["A", "B"],
+        columns=[1, 2, 3],
+    )
+    stock = make_bacterial_stock(
         uri="https://example.org/implementation/stock1",
         strain_md_uri="https://example.org/designs/strain1",
     )
-    validate_placement(item, slot)
-
-
-def test_validate_placement_rejects_wrong_kind():
-    slot = make_slot(
-        "https://example.org/storage/-80/shelf1/box1/A1",
-        allowed_item_kinds=[BACTERIAL_STOCK],
+    procured = make_procured_material(
+        uri="https://example.org/implementation/procured1",
+        material_md_uri="https://example.org/designs/material1",
     )
-    item = make_extracted_plasmid(
-        uri="https://example.org/implementation/plasmid1",
+    add_all(doc, [box, stock, procured])
+
+    place_in_container(box, stock, row="B", column=2)
+    with pytest.raises(ValueError):
+        place_in_container(box, procured, row="B", column=2)
+
+
+def test_move_remove_and_discard_behaviors():
+    plate = make_solid_media_plate(
+        uri="https://example.org/implementation/plate1",
+        plate_md_uri="https://example.org/designs/plate_md",
+        rows=["A", "B"],
+        columns=[1, 2, 3],
+    )
+    box = make_box(
+        uri="https://example.org/implementation/box1",
+        box_md_uri="https://example.org/designs/box_md",
+        rows=["A", "B"],
+        columns=[1, 2, 3],
+    )
+    stock = make_bacterial_stock(
+        uri="https://example.org/implementation/stock1",
+        strain_md_uri="https://example.org/designs/strain1",
+    )
+
+    place_in_container(box, stock, row="A", column=1)
+    move_item(stock, plate, row="B", column=3)
+    assert str(stock.contained_in_container) == str(plate.identity)
+    assert str(stock.container_row) == "B"
+    assert int(stock.container_column) == 3
+
+    remove_from_container(stock)
+    assert stock.contained_in_container is None
+    assert stock.container_row is None
+    assert stock.container_column is None
+
+    discard_implementation(stock)
+    assert int(stock.is_active) == 0
+
+
+def test_object_graph_kinds_match_requested_model():
+    diluted = make_diluted_plasmid(
+        uri="https://example.org/implementation/dp1",
         plasmid_cd_uri="https://example.org/designs/plasmid1",
     )
-    with pytest.raises(ValueError):
-        validate_placement(item, slot)
+    stock = make_bacterial_stock(
+        uri="https://example.org/implementation/stock1",
+        strain_md_uri="https://example.org/designs/strain1",
+    )
+    assert str(diluted.inventory_kind) == DILUTED_PLASMID
+    assert str(stock.inventory_kind) == BACTERIAL_STOCK
