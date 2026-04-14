@@ -2,27 +2,33 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Iterable, Optional, Sequence
 
 from .namespaces import (
-    EXTRACTED_PLASMID,
+    DILUTED_PLASMID,
     BACTERIAL_STOCK,
     SOLID_MEDIA_PLATE,
+    PLATED_STRAIN,
+    PROCURED_MATERIAL,
+    BOX,
     FRIDGE_MINUS_80,
     FRIDGE_MINUS_20,
     FRIDGE_4C,
     SHELF,
-    BOX,
-    SLOT,
 )
 from .schema import InventoryImplementation, StorageCollection
+from .validation import (
+    validate_container_and_item,
+    validate_container_position,
+    validate_container_spec,
+)
 
 
 def make_fridge_minus80(uri: str) -> StorageCollection:
     x = StorageCollection(uri)
     x.storage_kind = FRIDGE_MINUS_80
     x.temperature_c = -80
-    x.allowed_item_kinds = [BACTERIAL_STOCK]
+    x.allowed_item_kinds = [BOX]
     return x
 
 
@@ -30,7 +36,7 @@ def make_fridge_minus20(uri: str) -> StorageCollection:
     x = StorageCollection(uri)
     x.storage_kind = FRIDGE_MINUS_20
     x.temperature_c = -20
-    x.allowed_item_kinds = [EXTRACTED_PLASMID]
+    x.allowed_item_kinds = [BOX]
     return x
 
 
@@ -50,46 +56,49 @@ def make_shelf(uri: str, label: Optional[str] = None) -> StorageCollection:
     return x
 
 
-def make_box(uri: str, label: Optional[str] = None) -> StorageCollection:
-    x = StorageCollection(uri)
-    x.storage_kind = BOX
-    if label:
-        x.label = label
-    return x
+def _init_container_layout(
+    x: InventoryImplementation,
+    rows: Sequence[str],
+    columns: Iterable[int],
+) -> None:
+    normalized_rows, normalized_cols = validate_container_spec(rows, columns)
+    x.allowed_rows = normalized_rows
+    x.allowed_columns = normalized_cols
 
 
-def make_slot(
+def make_box(
     uri: str,
-    label: Optional[str] = None,
-    row: Optional[str] = None,
-    column: Optional[str] = None,
-    allowed_item_kinds=None,
-) -> StorageCollection:
-    x = StorageCollection(uri)
-    x.storage_kind = SLOT
-    if label:
-        x.label = label
-    if row:
-        x.row = row
-    if column:
-        x.column = column
-    if allowed_item_kinds:
-        x.allowed_item_kinds = allowed_item_kinds
-    return x
-
-
-def make_extracted_plasmid(
-    uri: str,
-    plasmid_cd_uri: str,
-    slot_uri: Optional[str] = None,
+    box_md_uri: str,
+    rows: Sequence[str],
+    columns: Iterable[int],
+    storage_uri: Optional[str] = None,
     design_uri: Optional[str] = None,
 ) -> InventoryImplementation:
-    """Create an extracted plasmid implementation."""
+    """Create a physical inventory box implementation with explicit layout."""
     x = InventoryImplementation(uri)
-    x.inventory_kind = EXTRACTED_PLASMID
+    x.inventory_kind = BOX
+    x.built = box_md_uri
+    x.is_active = 1
+    _init_container_layout(x, rows=rows, columns=columns)
+    if storage_uri:
+        x.stored_at = storage_uri
+    if design_uri:
+        x.wasDerivedFroms = [design_uri]
+    return x
+
+
+def make_diluted_plasmid(
+    uri: str,
+    plasmid_cd_uri: str,
+    storage_uri: Optional[str] = None,
+    design_uri: Optional[str] = None,
+) -> InventoryImplementation:
+    x = InventoryImplementation(uri)
+    x.inventory_kind = DILUTED_PLASMID
     x.built = plasmid_cd_uri
-    if slot_uri:
-        x.stored_at = slot_uri
+    x.is_active = 1
+    if storage_uri:
+        x.stored_at = storage_uri
     if design_uri:
         x.wasDerivedFroms = [design_uri]
     return x
@@ -98,15 +107,46 @@ def make_extracted_plasmid(
 def make_bacterial_stock(
     uri: str,
     strain_md_uri: str,
-    slot_uri: Optional[str] = None,
+    storage_uri: Optional[str] = None,
     design_uri: Optional[str] = None,
 ) -> InventoryImplementation:
-    """Create a bacterial stock implementation."""
     x = InventoryImplementation(uri)
     x.inventory_kind = BACTERIAL_STOCK
     x.built = strain_md_uri
-    if slot_uri:
-        x.stored_at = slot_uri
+    x.is_active = 1
+    if storage_uri:
+        x.stored_at = storage_uri
+    if design_uri:
+        x.wasDerivedFroms = [design_uri]
+    return x
+
+
+def make_procured_material(
+    uri: str,
+    material_md_uri: str,
+    storage_uri: Optional[str] = None,
+    design_uri: Optional[str] = None,
+) -> InventoryImplementation:
+    x = InventoryImplementation(uri)
+    x.inventory_kind = PROCURED_MATERIAL
+    x.built = material_md_uri
+    x.is_active = 1
+    if storage_uri:
+        x.stored_at = storage_uri
+    if design_uri:
+        x.wasDerivedFroms = [design_uri]
+    return x
+
+
+def make_plated_strain(
+    uri: str,
+    strain_md_uri: str,
+    design_uri: Optional[str] = None,
+) -> InventoryImplementation:
+    x = InventoryImplementation(uri)
+    x.inventory_kind = PLATED_STRAIN
+    x.built = strain_md_uri
+    x.is_active = 1
     if design_uri:
         x.wasDerivedFroms = [design_uri]
     return x
@@ -115,28 +155,109 @@ def make_bacterial_stock(
 def make_solid_media_plate(
     uri: str,
     plate_md_uri: str,
-    slot_uri: Optional[str] = None,
+    rows: Sequence[str],
+    columns: Iterable[int],
+    storage_uri: Optional[str] = None,
     design_uri: Optional[str] = None,
 ) -> InventoryImplementation:
-    """Create a solid media plate implementation."""
     x = InventoryImplementation(uri)
     x.inventory_kind = SOLID_MEDIA_PLATE
     x.built = plate_md_uri
-    if slot_uri:
-        x.stored_at = slot_uri
+    x.is_active = 1
+    _init_container_layout(x, rows=rows, columns=columns)
+    if storage_uri:
+        x.stored_at = storage_uri
     if design_uri:
         x.wasDerivedFroms = [design_uri]
     return x
 
 
-def add_child(parent: StorageCollection, child) -> None:
+def add_child(parent: StorageCollection, child: InventoryImplementation | StorageCollection) -> None:
     """Attach a storage node or inventory item to a parent collection."""
-    parent.members.add(child.identity)
+    parent.members.append(child.identity)
     if isinstance(child, StorageCollection):
         child.parent_storage = parent.identity
+    else:
+        child.stored_at = parent.identity
 
 
-def place_item(slot: StorageCollection, item: InventoryImplementation) -> None:
-    """Place an inventory item into a leaf slot."""
-    slot.members.add(item.identity)
-    item.stored_at = slot.identity
+def place_item(storage: StorageCollection, item: InventoryImplementation) -> None:
+    """Place an inventory item directly into a storage collection."""
+    storage.members.append(item.identity)
+    item.stored_at = storage.identity
+
+
+def place_in_container(
+    container: InventoryImplementation,
+    item: InventoryImplementation,
+    row: str,
+    column: int,
+    *,
+    check_occupied: bool = True,
+) -> None:
+    """Place an inventory item into a container implementation at row/column."""
+    normalized_row, normalized_col = validate_container_position(container, row, column)
+    validate_container_and_item(container, item)
+
+    if check_occupied and container.doc is not None:
+        for existing in container.doc.implementations:
+            if not isinstance(existing, InventoryImplementation):
+                continue
+            if str(existing.identity) == str(item.identity):
+                continue
+            if (
+                str(existing.contained_in_container) == str(container.identity)
+                and str(existing.container_row) == normalized_row
+                and int(existing.container_column) == normalized_col
+            ):
+                raise ValueError(
+                    f"Position {normalized_row}{normalized_col} in {container.identity} is occupied by "
+                    f"{existing.identity}"
+                )
+
+    item.contained_in_container = container.identity
+    item.container_row = normalized_row
+    item.container_column = normalized_col
+
+
+def place_in_plate(
+    plate: InventoryImplementation,
+    item: InventoryImplementation,
+    well: str,
+    *,
+    check_occupied: bool = True,
+) -> None:
+    """Compatibility helper for plate placement using a well string like A1."""
+    row = well[0]
+    column = int(well[1:])
+    place_in_container(plate, item, row=row, column=column, check_occupied=check_occupied)
+
+
+def move_item(
+    item: InventoryImplementation,
+    new_container: InventoryImplementation,
+    row: str,
+    column: int,
+    *,
+    check_occupied: bool = True,
+) -> None:
+    """Move an already-placed item to a new container position."""
+    place_in_container(
+        new_container,
+        item,
+        row=row,
+        column=column,
+        check_occupied=check_occupied,
+    )
+
+
+def remove_from_container(item: InventoryImplementation) -> None:
+    """Remove an item from whatever container position it currently occupies."""
+    item.contained_in_container = None
+    item.container_row = None
+    item.container_column = None
+
+
+def discard_implementation(item: InventoryImplementation) -> None:
+    """Mark an inventory implementation as inactive/discarded."""
+    item.is_active = 0

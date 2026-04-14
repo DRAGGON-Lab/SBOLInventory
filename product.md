@@ -4,90 +4,31 @@
 SBOLInventory
 
 ## Purpose
-SBOLInventory provides a clean Python API for modeling laboratory inventory in SBOL 2 so that physical samples can be represented, placed into storage hierarchies, and later exchanged or submitted through tools such as SynBioHub.
+SBOLInventory provides a Python API for modeling physical laboratory inventory in SBOL 2 with explicit distinction between storage hierarchy and container occupancy.
 
-## Problem
-Laboratories often have a digital design representation, but the physical realization of those designs is tracked outside the design graph, often in spreadsheets or ad hoc notes.
+## Core model
 
-SBOL already includes `Implementation` as the concept for physical realization, but practical laboratory inventory tracking needs more structure than the base class provides. We need a reusable software layer that can:
-
-- represent implementation type
-- capture storage location
-- organize storage containers hierarchically
-- validate whether an item is placed in an allowed storage location
-
-## Users
-Primary users:
-
-- synthetic biology software engineers
-- laboratory informatics developers
-- SynBioHub integrators
-- researchers building physical sample tracking pipelines
-
-## MVP
-The first release of SBOLInventory should support:
-
-- custom SBOL extension-aware classes for inventory objects and storage collections
-- controlled vocabulary constants for item and storage kinds
-- factory functions for:
-  - `ExtractedPlasmid`
-  - `BacterialStock`
-  - `SolidMediaPlate`
+- Storage hierarchy (`Collection`):
   - `FridgeMinus80C`
   - `FridgeMinus20C`
   - `Fridge4C`
   - `Shelf`
+- Physical implementations (`Implementation`):
   - `Box`
-  - `Slot`
-- placement validation
-- basic document assembly
-- example notebook demonstrating common workflows
-
-## Non-goals
-This repository should not initially include:
-
-- SynBioHub login and submission code
-- HTTP APIs
-- database persistence
-- machine learning
-- image attachment handling
-- frontend code
+  - `SolidMediaPlate`
+  - `BacterialStock`
+  - `DilutedPlasmid`
+  - `ProcuredMaterial`
+  - `PlatedStrain`
 
 ## Functional requirements
 
-### FR1: inventory object creation
-The package must support creation of typed SBOL implementations for:
-- extracted plasmid
-- bacterial stock
-- solid media plate
-
-### FR2: storage hierarchy creation
-The package must support creation of storage nodes for:
-- freezer or fridge
-- shelf
-- box
-- slot
-
-### FR3: containment modeling
-The package must support representing:
-- freezer contains shelf
-- shelf contains box
-- box contains slot
-- slot contains item
-
-### FR4: placement validation
-The package must support application-level validation rules:
-- extracted plasmids go to -20 C
-- bacterial stocks go to -80 C
-- solid media plates go to 4 C storage
-
-### FR5: examples
-The repository must include examples that are easy for humans and AI coding agents to execute and extend.
-
-## Quality goals
-- simple API
-- explicit naming
-- low cognitive load
-- easy import into a future backend service
-- easily testable
-- faithful to the intended inventory model
+1. Container implementations (`Box`, `SolidMediaPlate`) must declare allowed rows and columns.
+2. Placement into containers must require row/column and validate:
+   - valid row/column for that container
+   - target position not already occupied
+3. Item lifecycle support:
+   - move between containers
+   - remove from container
+   - discard item by setting active flag to false
+4. Designs (`ModuleDefinition`) are never directly placed; only implementations are placed.

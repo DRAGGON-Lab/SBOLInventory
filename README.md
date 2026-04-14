@@ -1,127 +1,88 @@
 # SBOLInventory
 
-SBOLInventory is a Python package for representing laboratory inventory objects in SBOL 2, with a focus on linking **physical implementations** to **storage hierarchy** in a way that is compatible with SynBioHub workflows.
+SBOLInventory is a Python package for SBOL 2 inventory modeling that separates:
 
-The package wraps the core ideas in the initial prototype into a reusable library:
+- **external storage hierarchy** (`Collection`): fridges and shelves
+- **physical containers/items** (`Implementation`): boxes, plates, and contained materials
 
-- `InventoryImplementation` extends SBOL `Implementation`
-- `StorageCollection` extends SBOL `Collection`
-- factory functions create typed inventory objects and storage nodes
-- containment helpers connect freezers, shelves, boxes, slots, and stored items
-- validation helpers enforce placement rules
-
-## Scope
-
-This repository is intentionally focused on **SBOL manipulation only**. It does not include:
-
-- a web server
-- a frontend
-- SynBioHub authentication flows
-- machine learning
-
-Those can be built later on top of this package.
-
-## Domain model
-
-### Inventory implementations
-- `ExtractedPlasmid`
-- `BacterialStock`
-- `SolidMediaPlate`
-
-### Storage hierarchy
-- `FridgeMinus80C`
-- `FridgeMinus20C`
-- `Fridge4C`
-- `Shelf`
-- `Box`
-- `Slot`
-
-## Repository structure
+## Object graph
 
 ```text
-SBOLInventory/
-├── README.md
-├── product.md
-├── architechture.md
-├── agent.md
-├── pyproject.toml
-├── .gitignore
-├── src/
-│   └── sbol_inventory/
-│       ├── __init__.py
-│       ├── namespaces.py
-│       ├── schema.py
-│       ├── factories.py
-│       ├── validation.py
-│       └── document.py
-├── tests/
-│   └── test_validation.py
-└── notebooks/
-    └── sbol_inventory_examples.ipynb
+Fridge4C (Collection)
+└── Shelf (Collection)
+      └── SolidMediaPlate (Implementation from MD)
+            └── PlatedStrain (Implementation from MD)
+
+FridgeMinus80C (Collection)
+└── Shelf (Collection)
+      └── Box (Implementation from MD)
+            └── BacterialStock (Implementation from MD)
+            └── ProcuredMaterial (Implementation from MD)
+
+FridgeMinus20C (Collection)
+└── Shelf (Collection)
+      └── Box (Implementation from MD)
+            └── DilutedPlasmid (Implementation from MD)
+            └── ProcuredMaterial (Implementation from MD)
 ```
 
-## Installation
+## Key concepts
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-```
+- `ModuleDefinition` is a design.
+- Physical items are always `InventoryImplementation` with `built` pointing to the design.
+- `SolidMediaPlate` and `Box` are container implementations with explicit allowed row/column layout.
+- Placed items record:
+  - `contained_in_container`
+  - `container_row`
+  - `container_column`
+- Every implementation has `is_active` and can be discarded (set inactive).
 
-## Quick example
+## Example
 
 ```python
-import sbol2 as sbol
 from sbol_inventory import (
-    make_fridge_minus80,
+    make_document,
+    add_all,
+    make_fridge_4c,
     make_shelf,
-    make_box,
-    make_slot,
-    make_bacterial_stock,
+    make_solid_media_plate,
+    make_plated_strain,
     add_child,
-    place_item,
-    validate_placement,
+    place_in_container,
 )
 
-doc = sbol.Document()
+# Storage hierarchy (Collections)
+doc = make_document()
+fridge4 = make_fridge_4c("https://example.org/storage/4C")
+shelf = make_shelf("https://example.org/storage/4C/shelf1")
 
-freezer = make_fridge_minus80("https://example.org/storage/-80")
-shelf = make_shelf("https://example.org/storage/-80/shelf2", label="Shelf 2")
-box = make_box("https://example.org/storage/-80/shelf2/box4", label="Box 4")
-slot = make_slot(
-    "https://example.org/storage/-80/shelf2/box4/A4",
-    label="A4",
+# Physical containers/items (Implementations)
+plate = make_solid_media_plate(
+    uri="https://example.org/implementation/plate1",
+    plate_md_uri="https://example.org/designs/plate_md",
+    rows=["A", "B", "C"],
+    columns=range(1, 5),
+)
+plated_strain = make_plated_strain(
+    uri="https://example.org/implementation/plated1",
+    strain_md_uri="https://example.org/designs/strain_md",
 )
 
-stock = make_bacterial_stock(
-    uri="https://example.org/implementation/bstock_001",
-    strain_md_uri="https://example.org/designs/strain_md_001",
-    slot_uri=slot.identity,
-)
+add_all(doc, [fridge4, shelf, plate, plated_strain])
+add_child(fridge4, shelf)
+add_child(shelf, plate)
 
-for obj in [freezer, shelf, box, slot, stock]:
-    doc.add(obj)
-
-add_child(freezer, shelf)
-add_child(shelf, box)
-add_child(box, slot)
-place_item(slot, stock)
-
-validate_placement(stock, slot)
+# Place by row/column, validated against allowed and occupancy
+place_in_container(plate, plated_strain, row="A", column=1)
 ```
 
-## Design principles
+## Main API additions
 
-- Keep the storage hierarchy explicit and queryable.
-- Use SBOL-native top-level objects where possible.
-- Keep the package small and composable so it can become a backend dependency later.
-- Favor deterministic helper functions over framework-heavy abstractions.
-
-## Next steps
-
-Recommended follow-on work after this repository is stable:
-
-1. add serialization helpers and round-trip parsing examples
-2. add stronger semantic validation
-3. add CI and packaging release workflow
-4. integrate into a service that submits to SynBioHub
+- `make_box(...)`
+- `make_diluted_plasmid(...)`
+- `make_procured_material(...)`
+- `make_plated_strain(...)`
+- `place_in_container(...)`
+- `move_item(...)`
+- `remove_from_container(...)`
+- `discard_implementation(...)`
