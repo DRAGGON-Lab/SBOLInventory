@@ -174,7 +174,7 @@ def make_solid_media_plate(
 
 def add_child(parent: StorageCollection, child: InventoryImplementation | StorageCollection) -> None:
     """Attach a storage node or inventory item to a parent collection."""
-    parent.members.add(child.identity)
+    parent.members.append(child.identity)
     if isinstance(child, StorageCollection):
         child.parent_storage = parent.identity
     else:
@@ -183,7 +183,7 @@ def add_child(parent: StorageCollection, child: InventoryImplementation | Storag
 
 def place_item(storage: StorageCollection, item: InventoryImplementation) -> None:
     """Place an inventory item directly into a storage collection."""
-    storage.members.add(item.identity)
+    storage.members.append(item.identity)
     item.stored_at = storage.identity
 
 
