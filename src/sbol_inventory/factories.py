@@ -172,6 +172,40 @@ def make_solid_media_plate(
     return x
 
 
+def make_single_well_petri_dish_plate(
+    uri: str,
+    plate_md_uri: str,
+    storage_uri: Optional[str] = None,
+    design_uri: Optional[str] = None,
+) -> InventoryImplementation:
+    """Create a single-well petri dish plate with a 1x1 A1 layout."""
+    return make_solid_media_plate(
+        uri=uri,
+        plate_md_uri=plate_md_uri,
+        rows=["A"],
+        columns=[1],
+        storage_uri=storage_uri,
+        design_uri=design_uri,
+    )
+
+
+def make_square_96_position_plate(
+    uri: str,
+    plate_md_uri: str,
+    storage_uri: Optional[str] = None,
+    design_uri: Optional[str] = None,
+) -> InventoryImplementation:
+    """Create a square plate that exposes the standard 96-well A1-H12 positions."""
+    return make_solid_media_plate(
+        uri=uri,
+        plate_md_uri=plate_md_uri,
+        rows=["A", "B", "C", "D", "E", "F", "G", "H"],
+        columns=range(1, 13),
+        storage_uri=storage_uri,
+        design_uri=design_uri,
+    )
+
+
 def add_child(parent: StorageCollection, child: InventoryImplementation | StorageCollection) -> None:
     """Attach a storage node or inventory item to a parent collection."""
     parent.members.append(child.identity)
