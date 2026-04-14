@@ -15,7 +15,9 @@ from sbol_inventory import (
     make_plated_strain,
     make_procured_material,
     make_shelf,
+    make_single_well_petri_dish_plate,
     make_solid_media_plate,
+    make_square_96_position_plate,
     move_item,
     place_in_container,
     remove_from_container,
@@ -179,3 +181,21 @@ def test_object_graph_kinds_match_requested_model():
     )
     assert str(diluted.inventory_kind) == DILUTED_PLASMID
     assert str(stock.inventory_kind) == BACTERIAL_STOCK
+
+
+def test_make_single_well_petri_dish_plate_layout():
+    plate = make_single_well_petri_dish_plate(
+        uri="https://example.org/implementation/petri1",
+        plate_md_uri="https://example.org/designs/petri_md",
+    )
+    assert list(plate.allowed_rows) == ["A"]
+    assert list(plate.allowed_columns) == [1]
+
+
+def test_make_square_96_position_plate_layout():
+    plate = make_square_96_position_plate(
+        uri="https://example.org/implementation/square96",
+        plate_md_uri="https://example.org/designs/square96_md",
+    )
+    assert list(plate.allowed_rows) == ["A", "B", "C", "D", "E", "F", "G", "H"]
+    assert list(plate.allowed_columns) == list(range(1, 13))
