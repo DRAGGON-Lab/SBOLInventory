@@ -19,6 +19,7 @@ from sbol_inventory import (
     make_solid_media_plate,
     make_square_96_position_plate,
     move_item,
+    place_in_plate,
     place_in_container,
     remove_from_container,
     validate_container_position,
@@ -199,3 +200,35 @@ def test_make_square_96_position_plate_layout():
     )
     assert list(plate.allowed_rows) == ["A", "B", "C", "D", "E", "F", "G", "H"]
     assert list(plate.allowed_columns) == list(range(1, 13))
+
+
+@pytest.mark.parametrize("well", ["", "A0", "A13"])
+def test_place_in_plate_rejects_malformed_wells(well):
+    plate = make_square_96_position_plate(
+        uri="https://example.org/implementation/square96",
+        plate_md_uri="https://example.org/designs/square96_md",
+    )
+    plated_strain = make_plated_strain(
+        uri="https://example.org/implementation/plated1",
+        strain_md_uri="https://example.org/designs/strain_md",
+    )
+
+    with pytest.raises(ValueError):
+        place_in_plate(plate, plated_strain, well=well)
+
+
+def test_place_in_plate_normalizes_well_before_placement():
+    plate = make_square_96_position_plate(
+        uri="https://example.org/implementation/square96",
+        plate_md_uri="https://example.org/designs/square96_md",
+    )
+    plated_strain = make_plated_strain(
+        uri="https://example.org/implementation/plated1",
+        strain_md_uri="https://example.org/designs/strain_md",
+    )
+
+    place_in_plate(plate, plated_strain, well=" a1 ")
+
+    assert str(plated_strain.contained_in_container) == str(plate.identity)
+    assert str(plated_strain.container_row) == "A"
+    assert int(plated_strain.container_column) == 1

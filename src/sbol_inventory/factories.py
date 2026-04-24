@@ -21,6 +21,7 @@ from .validation import (
     validate_container_and_item,
     validate_container_position,
     validate_container_spec,
+    validate_well_position,
 )
 
 
@@ -262,8 +263,9 @@ def place_in_plate(
     check_occupied: bool = True,
 ) -> None:
     """Compatibility helper for plate placement using a well string like A1."""
-    row = well[0]
-    column = int(well[1:])
+    normalized_well = validate_well_position(well)
+    row = normalized_well[0]
+    column = int(normalized_well[1:])
     place_in_container(plate, item, row=row, column=column, check_occupied=check_occupied)
 
 
