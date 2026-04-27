@@ -21,7 +21,6 @@ from .validation import (
     validate_container_and_item,
     validate_container_position,
     validate_container_spec,
-    validate_well_position,
 )
 
 
@@ -263,9 +262,19 @@ def place_in_plate(
     check_occupied: bool = True,
 ) -> None:
     """Compatibility helper for plate placement using a well string like A1."""
-    normalized_well = validate_well_position(well)
+    if not isinstance(well, str):
+        raise ValueError("Well must be provided as a string like 'A1'")
+
+    normalized_well = well.strip().upper()
+    if len(normalized_well) < 2:
+        raise ValueError(f"Invalid well position '{well}'. Expected format like 'A1'.")
+
     row = normalized_well[0]
-    column = int(normalized_well[1:])
+    column_str = normalized_well[1:]
+    if not row.isalpha() or not column_str.isdigit():
+        raise ValueError(f"Invalid well position '{well}'. Expected format like 'A1'.")
+
+    column = int(column_str)
     place_in_container(plate, item, row=row, column=column, check_occupied=check_occupied)
 
 

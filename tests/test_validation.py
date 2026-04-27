@@ -232,3 +232,22 @@ def test_place_in_plate_normalizes_well_before_placement():
     assert str(plated_strain.contained_in_container) == str(plate.identity)
     assert str(plated_strain.container_row) == "A"
     assert int(plated_strain.container_column) == 1
+
+
+def test_place_in_plate_accepts_non_96_container_well_positions():
+    plate = make_solid_media_plate(
+        uri="https://example.org/implementation/plate384",
+        plate_md_uri="https://example.org/designs/plate384_md",
+        rows=[chr(x) for x in range(ord("A"), ord("P") + 1)],
+        columns=range(1, 25),
+    )
+    plated_strain = make_plated_strain(
+        uri="https://example.org/implementation/plated384",
+        strain_md_uri="https://example.org/designs/strain_md",
+    )
+
+    place_in_plate(plate, plated_strain, well=" p24 ")
+
+    assert str(plated_strain.contained_in_container) == str(plate.identity)
+    assert str(plated_strain.container_row) == "P"
+    assert int(plated_strain.container_column) == 24
