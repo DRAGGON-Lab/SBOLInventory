@@ -43,6 +43,20 @@ class InventoryImplementation(sbol.Implementation):
         self.notes = sbol.TextProperty(self, EX + "notes", 0, 1, [])
         self.freeze_date = sbol.DateTimeProperty(self, EX + "freezeDate", 0, 1, [])
 
+    def contained_object_uris(self) -> list[str]:
+        """Return URIs for inventory objects currently contained by this object."""
+        if self.doc is None:
+            return []
+
+        container_uri = str(self.identity)
+        contained: list[str] = []
+        for implementation in self.doc.implementations:
+            if not isinstance(implementation, InventoryImplementation):
+                continue
+            if str(implementation.contained_in_container) == container_uri:
+                contained.append(str(implementation.identity))
+        return contained
+
 
 class StorageCollection(sbol.Collection):
     """Storage hierarchy node represented as an SBOL Collection."""

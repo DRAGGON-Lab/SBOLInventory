@@ -16,8 +16,8 @@ from sbol_inventory import (
     make_procured_material,
     make_shelf,
     make_single_well_petri_dish_plate,
+    make_solid_96_well_plate,
     make_solid_media_plate,
-    make_square_96_position_plate,
     move_item,
     place_in_plate,
     place_in_container,
@@ -193,8 +193,8 @@ def test_make_single_well_petri_dish_plate_layout():
     assert list(plate.allowed_columns) == [1]
 
 
-def test_make_square_96_position_plate_layout():
-    plate = make_square_96_position_plate(
+def test_make_solid_96_well_plate_layout():
+    plate = make_solid_96_well_plate(
         uri="https://example.org/implementation/square96",
         plate_md_uri="https://example.org/designs/square96_md",
     )
@@ -204,7 +204,7 @@ def test_make_square_96_position_plate_layout():
 
 @pytest.mark.parametrize("well", ["", "A0", "A13"])
 def test_place_in_plate_rejects_malformed_wells(well):
-    plate = make_square_96_position_plate(
+    plate = make_solid_96_well_plate(
         uri="https://example.org/implementation/square96",
         plate_md_uri="https://example.org/designs/square96_md",
     )
@@ -218,7 +218,7 @@ def test_place_in_plate_rejects_malformed_wells(well):
 
 
 def test_place_in_plate_normalizes_well_before_placement():
-    plate = make_square_96_position_plate(
+    plate = make_solid_96_well_plate(
         uri="https://example.org/implementation/square96",
         plate_md_uri="https://example.org/designs/square96_md",
     )
@@ -251,3 +251,28 @@ def test_place_in_plate_accepts_non_96_container_well_positions():
     assert str(plated_strain.contained_in_container) == str(plate.identity)
     assert str(plated_strain.container_row) == "P"
     assert int(plated_strain.container_column) == 24
+
+
+def test_container_can_list_contained_object_uris():
+    doc = make_document()
+    plate = make_solid_96_well_plate(
+        uri="https://example.org/implementation/square96",
+        plate_md_uri="https://example.org/designs/square96_md",
+    )
+    plated_a1 = make_plated_strain(
+        uri="https://example.org/implementation/plated-a1",
+        strain_md_uri="https://example.org/designs/strain_md",
+    )
+    plated_b2 = make_plated_strain(
+        uri="https://example.org/implementation/plated-b2",
+        strain_md_uri="https://example.org/designs/strain_md",
+    )
+    add_all(doc, [plate, plated_a1, plated_b2])
+
+    place_in_plate(plate, plated_a1, well="A1")
+    place_in_plate(plate, plated_b2, well="B2")
+
+    assert plate.contained_object_uris() == [
+        str(plated_a1.identity),
+        str(plated_b2.identity),
+    ]
