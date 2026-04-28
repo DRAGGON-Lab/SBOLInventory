@@ -189,7 +189,7 @@ def make_single_well_petri_dish_plate(
     )
 
 
-def make_square_96_position_plate(
+def make_solid_96_well_plate(
     uri: str,
     plate_md_uri: str,
     storage_uri: Optional[str] = None,
@@ -201,6 +201,21 @@ def make_square_96_position_plate(
         plate_md_uri=plate_md_uri,
         rows=["A", "B", "C", "D", "E", "F", "G", "H"],
         columns=range(1, 13),
+        storage_uri=storage_uri,
+        design_uri=design_uri,
+    )
+
+
+def make_square_96_position_plate(
+    uri: str,
+    plate_md_uri: str,
+    storage_uri: Optional[str] = None,
+    design_uri: Optional[str] = None,
+) -> InventoryImplementation:
+    """Backward-compatible alias for :func:`make_solid_96_well_plate`."""
+    return make_solid_96_well_plate(
+        uri=uri,
+        plate_md_uri=plate_md_uri,
         storage_uri=storage_uri,
         design_uri=design_uri,
     )
