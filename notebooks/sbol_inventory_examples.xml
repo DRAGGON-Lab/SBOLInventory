@@ -1,0 +1,46 @@
+<rdf:RDF xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:xsd="http://www.w3.org/2001/XMLSchema#" xmlns:sbol="http://sbols.org/v2#" xmlns:ns0="https://draggon.org/ns/inventory#">
+  <sbol:Collection rdf:about="http://examples.org/Collection/GLL_fridge_4c/1">
+    <sbol:version>1</sbol:version>
+    <sbol:persistentIdentity rdf:resource="http://examples.org/Collection/GLL_fridge_4c"/>
+    <ns0:allowedItemKind rdf:resource="https://draggon.org/ns/inventory#SolidMediaPlate"/>
+    <sbol:displayId>GLL_fridge_4c</sbol:displayId>
+    <ns0:temperatureC>4</ns0:temperatureC>
+    <sbol:member rdf:resource="http://examples.org/Collection/fridge_4c_shelf4/1"/>
+    <ns0:storageKind rdf:resource="https://draggon.org/ns/inventory#Fridge4C"/>
+  </sbol:Collection>
+  <sbol:Collection rdf:about="http://examples.org/Collection/fridge_4c_shelf4/1">
+    <ns0:storageKind rdf:resource="https://draggon.org/ns/inventory#Shelf"/>
+    <sbol:persistentIdentity rdf:resource="http://examples.org/Collection/fridge_4c_shelf4"/>
+    <ns0:parentStorage rdf:resource="http://examples.org/Collection/GLL_fridge_4c/1"/>
+    <sbol:displayId>fridge_4c_shelf4</sbol:displayId>
+    <sbol:member rdf:resource="http://examples.org/Implementation/plate_Eco20260411/1"/>
+    <sbol:version>1</sbol:version>
+  </sbol:Collection>
+  <sbol:Implementation rdf:about="http://examples.org/Implementation/plate_Eco20260411/1">
+    <ns0:allowedColumns>2</ns0:allowedColumns>
+    <ns0:allowedColumns>3</ns0:allowedColumns>
+    <sbol:persistentIdentity rdf:resource="http://examples.org/Implementation/plate_Eco20260411"/>
+    <ns0:allowedRows>B</ns0:allowedRows>
+    <ns0:inventoryKind rdf:resource="https://draggon.org/ns/inventory#SolidMediaPlate"/>
+    <sbol:built rdf:resource="https://example.org/designs/plate_md"/>
+    <ns0:isActive>1</ns0:isActive>
+    <sbol:version>1</sbol:version>
+    <ns0:allowedRows>C</ns0:allowedRows>
+    <ns0:storedAt rdf:resource="http://examples.org/Collection/fridge_4c_shelf4/1"/>
+    <ns0:allowedColumns>4</ns0:allowedColumns>
+    <ns0:allowedColumns>1</ns0:allowedColumns>
+    <ns0:allowedRows>A</ns0:allowedRows>
+    <sbol:displayId>plate_Eco20260411</sbol:displayId>
+  </sbol:Implementation>
+  <sbol:Implementation rdf:about="http://examples.org/Implementation/plated_EcoDh5alpha_pJ23100_AB_r1/1">
+    <ns0:containerColumn>4</ns0:containerColumn>
+    <sbol:built rdf:resource="https://example.org/designs/strain_md"/>
+    <ns0:isActive>1</ns0:isActive>
+    <sbol:version>1</sbol:version>
+    <sbol:persistentIdentity rdf:resource="http://examples.org/Implementation/plated_EcoDh5alpha_pJ23100_AB_r1"/>
+    <ns0:containerRow>C</ns0:containerRow>
+    <sbol:displayId>plated_EcoDh5alpha_pJ23100_AB_r1</sbol:displayId>
+    <ns0:inventoryKind rdf:resource="https://draggon.org/ns/inventory#PlatedStrain"/>
+    <ns0:containedInContainer rdf:resource="http://examples.org/Implementation/plate_Eco20260411/1"/>
+  </sbol:Implementation>
+</rdf:RDF>

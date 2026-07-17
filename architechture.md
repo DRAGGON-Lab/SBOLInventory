@@ -41,3 +41,25 @@ Helpers:
 - `move_item(...)`
 - `remove_from_container(...)`
 - `discard_implementation(...)`
+
+## Authoritative location edges
+
+`sbol:member` is used only for direct physical storage edges:
+
+```text
+Fridge Collection -> Shelf Collection -> Box or Plate Implementation
+```
+
+An item inside a box or plate is linked only through
+`contained_in_container`, `container_row`, and `container_column`. It is not
+also a direct shelf member. `parent_storage` and `stored_at` are maintained as
+inverse links for direct `sbol:member` edges and are checked by
+`validate_inventory_graph`.
+
+## SynBioHub identity model
+
+Call `configure_synbiohub("https://synbiohub.org/<owner>/<submission-id>")`
+before constructing objects. In that mode, factory arguments are SBOL display
+IDs and pySBOL2 produces untyped identities under the configured namespace.
+The submission ID must be selected before object construction so the identity
+does not need to change after upload.

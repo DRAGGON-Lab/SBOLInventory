@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import re
 
 import sbol2 as sbol
 from sbol2 import Config
@@ -10,11 +11,29 @@ from sbol2 import Config
 from .namespaces import EX, SBOL_COLLECTION, SBOL_IMPLEMENTATION
 
 
+DISPLAY_ID_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _require_synbiohub_display_id(uri: str) -> None:
+    """Avoid pySBOL2 treating a full URL as a display ID in SynBioHub mode."""
+    homespace = Config.getHomespace().rstrip("/")
+    if (
+        homespace.startswith("https://synbiohub.org/")
+        and Config.getOption("sbol_compliant_uris")
+        and not DISPLAY_ID_RE.fullmatch(str(uri))
+    ):
+        raise ValueError(
+            "SynBioHub configuration requires a display ID containing only "
+            "letters, digits, and underscores; do not pass a full URI"
+        )
+
+
 class InventoryImplementation(sbol.Implementation):
     """Physical laboratory inventory item represented as an SBOL Implementation."""
 
-    def __init__(self, uri: str = "example"):
-        super().__init__(uri=uri)
+    def __init__(self, uri: str = "example", version: str = "1"):
+        _require_synbiohub_display_id(uri)
+        super().__init__(uri=uri, version=version)
 
         self.inventory_kind = sbol.URIProperty(self, EX + "inventoryKind", 1, 1, [])
         self.stored_at = sbol.ReferencedObject(
@@ -61,8 +80,9 @@ class InventoryImplementation(sbol.Implementation):
 class StorageCollection(sbol.Collection):
     """Storage hierarchy node represented as an SBOL Collection."""
 
-    def __init__(self, uri: str = "example"):
-        super().__init__(uri=uri)
+    def __init__(self, uri: str = "example", version: str = "1"):
+        _require_synbiohub_display_id(uri)
+        super().__init__(uri=uri, version=version)
 
         self.storage_kind = sbol.URIProperty(self, EX + "storageKind", 1, 1, [])
         self.parent_storage = sbol.ReferencedObject(
@@ -72,6 +92,9 @@ class StorageCollection(sbol.Collection):
         self.label = sbol.TextProperty(self, EX + "label", 0, 1, [])
         self.allowed_item_kinds = sbol.URIProperty(
             self, EX + "allowedItemKind", 0, math.inf, []
+        )
+        self.allowed_storage_kinds = sbol.URIProperty(
+            self, EX + "allowedStorageKind", 0, math.inf, []
         )
 
 

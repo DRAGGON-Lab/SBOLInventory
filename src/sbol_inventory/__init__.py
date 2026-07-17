@@ -43,8 +43,9 @@ from .validation import (
     validate_container_spec,
     validate_container_position,
     validate_container_and_item,
+    validate_inventory_graph,
 )
-from .document import make_document, add_all, write_rdfxml
+from .document import configure_synbiohub, make_document, add_all, write_rdfxml
 
 __all__ = [
     "EX",
@@ -87,6 +88,8 @@ __all__ = [
     "validate_container_spec",
     "validate_container_position",
     "validate_container_and_item",
+    "validate_inventory_graph",
+    "configure_synbiohub",
     "make_document",
     "add_all",
     "write_rdfxml",

@@ -113,6 +113,7 @@ def test_validate_container_position_rejects_invalid(row, column):
 
 
 def test_place_in_container_records_reference_and_position():
+    doc = make_document()
     plate = make_solid_media_plate(
         uri="https://example.org/implementation/plate1",
         plate_md_uri="https://example.org/designs/plate_md",
@@ -123,6 +124,7 @@ def test_place_in_container_records_reference_and_position():
         uri="https://example.org/implementation/plated1",
         strain_md_uri="https://example.org/designs/strain_md",
     )
+    add_all(doc, [plate, plated_strain])
 
     place_in_container(plate, plated_strain, row="A", column=1)
 
@@ -155,6 +157,7 @@ def test_duplicate_occupancy_is_rejected_in_same_document():
 
 
 def test_move_remove_and_discard_behaviors():
+    doc = make_document()
     plate = make_solid_media_plate(
         uri="https://example.org/implementation/plate1",
         plate_md_uri="https://example.org/designs/plate_md",
@@ -171,6 +174,7 @@ def test_move_remove_and_discard_behaviors():
         uri="https://example.org/implementation/stock1",
         strain_md_uri="https://example.org/designs/strain1",
     )
+    add_all(doc, [plate, box, stock])
 
     place_in_container(box, stock, row="A", column=1)
     move_item(stock, plate, row="B", column=3)
@@ -234,6 +238,7 @@ def test_place_in_plate_rejects_malformed_wells(well):
 
 
 def test_place_in_plate_normalizes_well_before_placement():
+    doc = make_document()
     plate = make_solid_96_well_plate(
         uri="https://example.org/implementation/square96",
         plate_md_uri="https://example.org/designs/square96_md",
@@ -242,6 +247,7 @@ def test_place_in_plate_normalizes_well_before_placement():
         uri="https://example.org/implementation/plated1",
         strain_md_uri="https://example.org/designs/strain_md",
     )
+    add_all(doc, [plate, plated_strain])
 
     place_in_plate(plate, plated_strain, well=" a1 ")
 
@@ -251,6 +257,7 @@ def test_place_in_plate_normalizes_well_before_placement():
 
 
 def test_place_in_plate_accepts_non_96_container_well_positions():
+    doc = make_document()
     plate = make_solid_media_plate(
         uri="https://example.org/implementation/plate384",
         plate_md_uri="https://example.org/designs/plate384_md",
@@ -261,6 +268,7 @@ def test_place_in_plate_accepts_non_96_container_well_positions():
         uri="https://example.org/implementation/plated384",
         strain_md_uri="https://example.org/designs/strain_md",
     )
+    add_all(doc, [plate, plated_strain])
 
     place_in_plate(plate, plated_strain, well=" p24 ")
 
