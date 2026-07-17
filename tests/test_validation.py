@@ -19,6 +19,7 @@ from sbol_inventory import (
     make_solid_96_well_plate,
     make_solid_media_plate,
     move_item,
+    place_item,
     place_in_plate,
     place_in_container,
     remove_from_container,
@@ -65,6 +66,21 @@ def test_validate_placement_storage_rules_for_shelf():
         columns=[1, 2],
     )
     validate_placement(plate, shelf)
+
+
+def test_place_item_adds_item_to_storage_members():
+    doc = make_document()
+    shelf = make_shelf("https://example.org/storage/shelf1")
+    stock = make_bacterial_stock(
+        uri="https://example.org/implementation/stock1",
+        strain_md_uri="https://example.org/designs/strain1",
+    )
+    add_all(doc, [shelf, stock])
+
+    place_item(shelf, stock)
+
+    assert list(shelf.members) == [stock.identity]
+    assert str(stock.stored_at) == str(shelf.identity)
 
 
 @pytest.mark.parametrize(
