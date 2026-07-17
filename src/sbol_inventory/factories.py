@@ -232,7 +232,7 @@ def add_child(parent: StorageCollection, child: InventoryImplementation | Storag
 
 def place_item(storage: StorageCollection, item: InventoryImplementation) -> None:
     """Place an inventory item directly into a storage collection."""
-    storage.members.append(item.identity)
+    storage.members = storage.members + [item.identity]
     item.stored_at = storage.identity
 
 
