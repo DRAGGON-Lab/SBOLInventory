@@ -1,246 +1,337 @@
-"""Validation helpers for SBOLInventory."""
+"""Semantic validation beyond the SBOL 3 core rules."""
 
 from __future__ import annotations
 
-import re
-from typing import Iterable, Sequence
+from collections.abc import Callable, Iterable
+from typing import TypeVar
+from urllib.parse import urlparse
 
-from .namespaces import (
-    DILUTED_PLASMID,
-    BACTERIAL_STOCK,
-    SOLID_MEDIA_PLATE,
-    PLATED_STRAIN,
-    PROCURED_MATERIAL,
-    BOX,
-    FRIDGE_MINUS_80,
-    FRIDGE_MINUS_20,
-    FRIDGE_4C,
-    SHELF,
-)
-from .schema import InventoryImplementation, StorageCollection
+import sbol3
+
+from .namespaces import CONTROL_MODES, QUALIFICATION_ORDER
+from .schema import Asset, Capability, Facility, MaterialLot, PropertyValue, Zone
 
 
-KNOWN_KINDS = {
-    DILUTED_PLASMID,
-    BACTERIAL_STOCK,
-    SOLID_MEDIA_PLATE,
-    PLATED_STRAIN,
-    PROCURED_MATERIAL,
-    BOX,
-}
-CONTAINER_KINDS = {SOLID_MEDIA_PLATE, BOX}
-STORAGE_KINDS = {FRIDGE_MINUS_80, FRIDGE_MINUS_20, FRIDGE_4C, SHELF}
-WELL_96_RE = re.compile(r"^[A-H](?:[1-9]|1[0-2])$")
+class InventoryValidationError(ValueError):
+    """The RDF is valid SBOL, but not a coherent facility catalog."""
 
 
-def validate_item(item: InventoryImplementation) -> None:
-    """Validate an inventory object at the item level."""
-    kind = str(item.inventory_kind)
-
-    if kind not in KNOWN_KINDS:
-        raise ValueError(f"Unknown inventory kind: {kind}")
-
-    if not item.built:
-        raise ValueError(f"{item.identity} is missing a built reference")
+T = TypeVar("T")
 
 
-def validate_placement(item: InventoryImplementation, storage: StorageCollection) -> None:
-    """Validate whether an item is allowed to be placed in a storage collection."""
-    allowed = set(storage.allowed_item_kinds)
-    if allowed and str(item.inventory_kind) not in allowed:
-        raise ValueError(
-            f"{item.identity} of kind {item.inventory_kind} "
-            f"is not allowed in storage {storage.identity}"
+def _identity(value) -> str | None:
+    return str(value) if value is not None else None
+
+
+def _require_reference(document: sbol3.Document, value, expected: type[T], label: str) -> T:
+    identity = _identity(value)
+    if identity is None:
+        raise InventoryValidationError(f"{label} is required")
+    resolved = document.find(identity)
+    if not isinstance(resolved, expected):
+        raise InventoryValidationError(
+            f"{label} refers to {identity}, which is not a {expected.__name__}"
         )
+    return resolved
 
 
-def validate_storage_child(
-    parent: StorageCollection, child: InventoryImplementation | StorageCollection
+def _require_iri(value, label: str) -> str:
+    text = str(value)
+    parsed = urlparse(text)
+    if (
+        not parsed.scheme
+        or any(character.isspace() for character in text)
+        or (parsed.scheme in {"http", "https"} and not parsed.netloc)
+    ):
+        raise InventoryValidationError(f"{label} must be an absolute IRI, found {text!r}")
+    return text
+
+
+def _facility_identity(obj: Zone | Asset | MaterialLot) -> str:
+    identity = _identity(obj.facility)
+    if identity is None:
+        raise InventoryValidationError(f"{obj.identity} does not name its facility")
+    return identity
+
+
+def _validate_property(value: PropertyValue, owner: str) -> None:
+    if value.kind is None:
+        raise InventoryValidationError(f"Property on {owner} has no kind")
+    _require_iri(value.kind, f"Property kind on {owner}")
+    choices = [
+        value.text_value,
+        value.integer_value,
+        value.real_value,
+        value.boolean_value,
+        value.uri_value,
+    ]
+    count = sum(choice is not None for choice in choices)
+    if count != 1:
+        raise InventoryValidationError(
+            f"Property {value.kind} on {owner} must have exactly one typed value"
+        )
+    if value.uri_value is not None:
+        _require_iri(value.uri_value, f"Property {value.kind} URI value on {owner}")
+    if value.unit is not None:
+        _require_iri(value.unit, f"Property {value.kind} unit on {owner}")
+
+
+def _validate_capability(capability: Capability, asset: Asset) -> None:
+    if capability.kind is None:
+        raise InventoryValidationError(f"Capability on {asset.identity} has no kind")
+    _require_iri(capability.kind, f"Capability kind on {asset.identity}")
+    if capability.qualification is None or str(capability.qualification) not in QUALIFICATION_ORDER:
+        raise InventoryValidationError(
+            f"Capability {capability.kind} on {asset.identity} has unknown qualification "
+            f"{capability.qualification}"
+        )
+    if capability.control_mode is None or str(capability.control_mode) not in CONTROL_MODES:
+        raise InventoryValidationError(
+            f"Capability {capability.kind} on {asset.identity} has unknown control mode "
+            f"{capability.control_mode}"
+        )
+    if capability.is_active is None:
+        raise InventoryValidationError(
+            f"Capability {capability.kind} on {asset.identity} has no lifecycle state"
+        )
+    for parameter in capability.parameters:
+        _validate_property(parameter, str(capability.kind))
+
+
+def _validate_no_cycles(
+    objects: Iterable[T],
+    identity: Callable[[T], str],
+    parent: Callable[[T], str | None],
+    label: str,
 ) -> None:
-    """Validate a direct edge in the fridge/shelf hierarchy."""
-    if not isinstance(parent, StorageCollection):
-        raise ValueError("Storage parent must be a StorageCollection")
+    by_identity = {identity(obj): obj for obj in objects}
+    for start in by_identity:
+        seen: set[str] = set()
+        current: str | None = start
+        while current is not None:
+            if current in seen:
+                raise InventoryValidationError(f"{label} contains a cycle through {current}")
+            seen.add(current)
+            obj = by_identity.get(current)
+            current = parent(obj) if obj is not None else None
 
-    parent_kind = str(parent.storage_kind)
-    if parent_kind not in STORAGE_KINDS:
-        raise ValueError(f"Unknown storage kind: {parent_kind}")
 
-    if isinstance(child, StorageCollection):
-        allowed = set(parent.allowed_storage_kinds)
-        if not allowed:
-            raise ValueError(
-                f"Storage {parent.identity} does not allow child storage collections"
+def _validate_asset_containment_cycles(
+    document: sbol3.Document,
+    assets: Iterable[Asset],
+) -> None:
+    """Reject cycles that mix composition and asset-to-asset location edges."""
+
+    edges: dict[str, set[str]] = {}
+    for asset in assets:
+        parents = {
+            identity
+            for identity in (
+                _identity(asset.part_of),
+                _identity(asset.located_in),
             )
-        if str(child.storage_kind) not in allowed:
-            raise ValueError(
-                f"Storage kind {child.storage_kind} is not allowed in {parent.identity}"
+            if identity is not None and isinstance(document.find(identity), Asset)
+        }
+        edges[str(asset.identity)] = parents
+
+    visited: set[str] = set()
+    active: set[str] = set()
+
+    def visit(identity: str) -> None:
+        if identity in active:
+            raise InventoryValidationError(f"Asset containment contains a cycle through {identity}")
+        if identity in visited:
+            return
+        active.add(identity)
+        for parent in edges.get(identity, ()):
+            visit(parent)
+        active.remove(identity)
+        visited.add(identity)
+
+    for identity in edges:
+        visit(identity)
+
+
+def _validate_location(
+    document: sbol3.Document,
+    obj: Asset | MaterialLot,
+    occupied: dict[tuple[str, str], str],
+) -> None:
+    location_uri = _identity(obj.located_in)
+    position = str(obj.position) if obj.position is not None else None
+    if position is not None and not position.strip():
+        raise InventoryValidationError(f"{obj.identity} has an empty position")
+    if location_uri is None:
+        if position is not None:
+            raise InventoryValidationError(f"{obj.identity} has a position but no location")
+        return
+    location = document.find(location_uri)
+    if not isinstance(location, (Zone, Asset)):
+        raise InventoryValidationError(
+            f"{obj.identity} location {location_uri} is not a Zone or Asset"
+        )
+    if _facility_identity(obj) != _facility_identity(location):
+        raise InventoryValidationError(
+            f"{obj.identity} and location {location.identity} belong to different facilities"
+        )
+    if isinstance(location, Zone):
+        if position is not None:
+            raise InventoryValidationError(
+                f"{obj.identity} gives position {position} inside a zone; "
+                "positions belong to assets"
             )
         return
-
-    if isinstance(child, InventoryImplementation):
-        validate_placement(child, parent)
-        return
-
-    raise ValueError("Storage children must be StorageCollection or InventoryImplementation")
-
-
-def validate_well_position(well: str) -> str:
-    """Validate and normalize a 96-well location (A1-H12)."""
-    if not isinstance(well, str):
-        raise ValueError("Well must be provided as a string like 'A1'")
-
-    normalized = well.strip().upper()
-    if not WELL_96_RE.match(normalized):
-        raise ValueError(
-            f"Invalid 96-well position '{well}'. Expected rows A-H and columns 1-12."
+    allowed = {str(value) for value in location.allowed_positions}
+    if allowed and position is None:
+        raise InventoryValidationError(
+            f"{obj.identity} must name a position in container {location.identity}"
         )
-    return normalized
-
-
-def validate_container_spec(rows: Sequence[str], columns: Iterable[int]) -> tuple[list[str], list[int]]:
-    """Validate row/column layout declaration for a container."""
-    if not rows:
-        raise ValueError("Container must define at least one allowed row")
-
-    normalized_rows = [str(r).strip().upper() for r in rows]
-    if any(not r.isalpha() or len(r) != 1 for r in normalized_rows):
-        raise ValueError("Rows must be single alphabetic labels like ['A', 'B']")
-
-    normalized_cols = [int(c) for c in columns]
-    if not normalized_cols:
-        raise ValueError("Container must define at least one allowed column")
-    if any(c < 1 for c in normalized_cols):
-        raise ValueError("Columns must be positive integers")
-
-    return normalized_rows, normalized_cols
-
-
-def validate_container_position(
-    container: InventoryImplementation, row: str, column: int
-) -> tuple[str, int]:
-    """Validate a row/column placement against a container's allowed positions."""
-    normalized_row = str(row).strip().upper()
-    normalized_col = int(column)
-
-    if normalized_row not in list(container.allowed_rows):
-        raise ValueError(
-            f"Row {normalized_row} is not allowed in container {container.identity}; "
-            f"allowed rows: {list(container.allowed_rows)}"
+    if position is not None and allowed and position not in allowed:
+        raise InventoryValidationError(
+            f"Position {position} is not allowed in container {location.identity}"
         )
-    if normalized_col not in list(container.allowed_columns):
-        raise ValueError(
-            f"Column {normalized_col} is not allowed in container {container.identity}; "
-            f"allowed columns: {list(container.allowed_columns)}"
-        )
-
-    return normalized_row, normalized_col
-
-
-def validate_container_and_item(
-    container: InventoryImplementation,
-    item: InventoryImplementation,
-) -> None:
-    """Validate implementation-to-container semantics."""
-    if not isinstance(container, InventoryImplementation):
-        raise ValueError("Container must be an InventoryImplementation")
-    if not isinstance(item, InventoryImplementation):
-        raise ValueError("Item must be an InventoryImplementation")
-
-    kind = str(container.inventory_kind)
-    if kind not in CONTAINER_KINDS:
-        raise ValueError(
-            f"Container {container.identity} must be one of {sorted(CONTAINER_KINDS)}"
-        )
-
-
-def validate_inventory_graph(doc) -> None:
-    """Validate inventory-specific invariants that SBOL core does not express.
-
-    SBOL validates the RDF structure, while this function validates the physical
-    location model: direct storage membership, inverse links, coordinates, and
-    slot occupancy.
-    """
-    direct_parent: dict[str, str] = {}
-    occupied_slots: set[tuple[str, str, int]] = set()
-
-    for storage in doc.collections:
-        if not isinstance(storage, StorageCollection):
-            raise ValueError(f"{storage.identity} is not a StorageCollection")
-        if str(storage.storage_kind) not in STORAGE_KINDS:
-            raise ValueError(f"Unknown storage kind: {storage.storage_kind}")
-
-        member_uris = [str(member) for member in storage.members]
-        if len(member_uris) != len(set(member_uris)):
-            raise ValueError(f"Storage {storage.identity} has duplicate members")
-
-        for member_uri in member_uris:
-            child = doc.find(member_uri)
-            if child is None:
-                raise ValueError(
-                    f"Storage {storage.identity} references missing member {member_uri}"
-                )
-            if not isinstance(child, (StorageCollection, InventoryImplementation)):
-                raise ValueError(
-                    f"Storage {storage.identity} member {member_uri} is not inventory data"
-                )
-            validate_storage_child(storage, child)
-            if member_uri in direct_parent:
-                raise ValueError(
-                    f"{member_uri} has multiple direct storage parents: "
-                    f"{direct_parent[member_uri]} and {storage.identity}"
-                )
-            direct_parent[member_uri] = str(storage.identity)
-
-            inverse_parent = (
-                child.parent_storage
-                if isinstance(child, StorageCollection)
-                else child.stored_at
+    if position is not None:
+        slot = (str(location.identity), position)
+        previous = occupied.get(slot)
+        if previous is not None:
+            raise InventoryValidationError(
+                f"Position {position} in {location.identity} is occupied by both "
+                f"{previous} and {obj.identity}"
             )
-            if str(inverse_parent) != str(storage.identity):
-                raise ValueError(
-                    f"Inverse storage link for {member_uri} does not match member parent "
-                    f"{storage.identity}"
-                )
+        occupied[slot] = str(obj.identity)
 
-    for storage in doc.collections:
-        parent_uri = str(storage.parent_storage) if storage.parent_storage else None
-        if parent_uri and direct_parent.get(str(storage.identity)) != parent_uri:
-            raise ValueError(
-                f"Storage {storage.identity} has parentStorage without matching membership"
+
+def validate_inventory_graph(document: sbol3.Document) -> None:
+    """Validate the catalog, location, capability, and material invariants."""
+
+    facilities = [obj for obj in document.objects if isinstance(obj, Facility)]
+    zones = [obj for obj in document.objects if isinstance(obj, Zone)]
+    assets = [obj for obj in document.objects if isinstance(obj, Asset)]
+    material_lots = [
+        obj
+        for obj in document.objects
+        if isinstance(obj, MaterialLot) and obj.inventory_kind is not None
+    ]
+
+    facility_ids = {str(facility.identity) for facility in facilities}
+    for zone in zones:
+        facility = _require_reference(
+            document, zone.facility, Facility, f"Zone {zone.identity} facility"
+        )
+        if str(facility.identity) not in facility_ids:
+            raise InventoryValidationError(f"Zone {zone.identity} names an unknown facility")
+        if zone.kind is None:
+            raise InventoryValidationError(f"Zone {zone.identity} has no kind")
+        _require_iri(zone.kind, f"Zone {zone.identity} kind")
+        if zone.is_active is None:
+            raise InventoryValidationError(f"Zone {zone.identity} has no lifecycle state")
+        if zone.parent_zone is not None:
+            parent = _require_reference(
+                document, zone.parent_zone, Zone, f"Zone {zone.identity} parent"
             )
+            if _facility_identity(parent) != _facility_identity(zone):
+                raise InventoryValidationError(
+                    f"Zone {zone.identity} and its parent belong to different facilities"
+                )
+        for condition in zone.conditions:
+            _validate_property(condition, str(zone.identity))
+        for policy in zone.policies:
+            _require_iri(policy, f"Zone {zone.identity} policy")
 
-    for item in doc.implementations:
-        if not isinstance(item, InventoryImplementation):
-            raise ValueError(f"{item.identity} is not an InventoryImplementation")
-        validate_item(item)
+    _validate_no_cycles(
+        zones,
+        lambda zone: str(zone.identity),
+        lambda zone: _identity(zone.parent_zone),
+        "Zone hierarchy",
+    )
 
-        container_uri = str(item.contained_in_container) if item.contained_in_container else None
-        row = str(item.container_row) if item.container_row is not None else None
-        column = int(item.container_column) if item.container_column is not None else None
-        coordinate_values = (container_uri, row, column)
-        if any(value is not None for value in coordinate_values) and any(
-            value is None for value in coordinate_values
-        ):
-            raise ValueError(
-                f"{item.identity} must have container, row, and column together"
+    for asset in assets:
+        _require_reference(document, asset.facility, Facility, f"Asset {asset.identity} facility")
+        if asset.kind is None:
+            raise InventoryValidationError(f"Asset {asset.identity} has no kind")
+        _require_iri(asset.kind, f"Asset {asset.identity} kind")
+        if asset.is_active is None:
+            raise InventoryValidationError(f"Asset {asset.identity} has no lifecycle state")
+        positions = [str(value) for value in asset.allowed_positions]
+        if any(not position.strip() for position in positions):
+            raise InventoryValidationError(f"Asset {asset.identity} has an empty allowed position")
+        if len(positions) != len(set(positions)):
+            raise InventoryValidationError(f"Asset {asset.identity} repeats an allowed position")
+        if asset.part_of is not None:
+            parent = _require_reference(
+                document, asset.part_of, Asset, f"Asset {asset.identity} parent"
             )
+            if _facility_identity(parent) != _facility_identity(asset):
+                raise InventoryValidationError(
+                    f"Asset {asset.identity} and its parent belong to different facilities"
+                )
+        for established in asset.establishes_zones:
+            zone = _require_reference(
+                document, established, Zone, f"Asset {asset.identity} established zone"
+            )
+            if _facility_identity(zone) != _facility_identity(asset):
+                raise InventoryValidationError(
+                    f"Asset {asset.identity} establishes a zone in another facility"
+                )
+        seen_capabilities: set[str] = set()
+        for capability in asset.capabilities:
+            _validate_capability(capability, asset)
+            kind = str(capability.kind)
+            if kind in seen_capabilities:
+                raise InventoryValidationError(
+                    f"Asset {asset.identity} offers capability {kind} more than once; "
+                    "use a child asset for a separately reservable functional unit"
+                )
+            seen_capabilities.add(kind)
 
-        if container_uri is not None:
-            container = doc.find(container_uri)
-            if not isinstance(container, InventoryImplementation):
-                raise ValueError(f"{item.identity} refers to a missing container {container_uri}")
-            validate_container_and_item(container, item)
-            validate_container_position(container, row, column)
-            slot = (container_uri, row, column)
-            if slot in occupied_slots:
-                raise ValueError(f"Container position {row}{column} in {container_uri} is occupied")
-            occupied_slots.add(slot)
-            if str(item.identity) in direct_parent or item.stored_at is not None:
-                raise ValueError(
-                    f"Contained item {item.identity} cannot also have direct storage membership"
-                )
-        elif item.stored_at is not None:
-            if direct_parent.get(str(item.identity)) != str(item.stored_at):
-                raise ValueError(
-                    f"Item {item.identity} has storedAt without matching storage membership"
-                )
+    _validate_no_cycles(
+        assets,
+        lambda asset: str(asset.identity),
+        lambda asset: _identity(asset.part_of),
+        "Asset composition",
+    )
+    _validate_no_cycles(
+        assets,
+        lambda asset: str(asset.identity),
+        lambda asset: (
+            _identity(asset.located_in)
+            if isinstance(document.find(_identity(asset.located_in) or ""), Asset)
+            else None
+        ),
+        "Asset location",
+    )
+    _validate_asset_containment_cycles(document, assets)
+
+    occupied: dict[tuple[str, str], str] = {}
+    for asset in assets:
+        _validate_location(document, asset, occupied)
+
+    for lot in material_lots:
+        _require_reference(
+            document, lot.facility, Facility, f"Material lot {lot.identity} facility"
+        )
+        if lot.built is None:
+            raise InventoryValidationError(f"Material lot {lot.identity} has no built Component")
+        _require_iri(lot.inventory_kind, f"Material lot {lot.identity} kind")
+        built = document.find(str(lot.built))
+        if not isinstance(built, sbol3.Component):
+            raise InventoryValidationError(
+                f"Material lot {lot.identity} built reference does not resolve to a Component"
+            )
+        if lot.is_active is None:
+            raise InventoryValidationError(f"Material lot {lot.identity} has no lifecycle state")
+        _validate_location(document, lot, occupied)
+
+
+def validate_document(document: sbol3.Document) -> None:
+    """Run both the SBOL 3 validator and the facility profile validator."""
+
+    report = document.validate()
+    if report.errors:
+        messages = "; ".join(str(error) for error in report.errors)
+        raise InventoryValidationError(f"SBOL 3 validation failed: {messages}")
+    validate_inventory_graph(document)
+
+
+# Clearer name for new callers; old code can retain validate_inventory_graph.
+validate_catalog = validate_inventory_graph

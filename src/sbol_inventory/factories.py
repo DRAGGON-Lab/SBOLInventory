@@ -1,370 +1,502 @@
-"""Factory functions for storage nodes and inventory implementations."""
+"""Typed constructors and graph mutation helpers."""
 
 from __future__ import annotations
 
-from typing import Iterable, Optional, Sequence
+from collections.abc import Iterable, Sequence
+from datetime import datetime
+
+import sbol3
 
 from .namespaces import (
-    DILUTED_PLASMID,
     BACTERIAL_STOCK,
-    SOLID_MEDIA_PLATE,
+    BOX,
+    CONTROL_UNSPECIFIED,
+    DILUTED_PLASMID,
+    FRIDGE_4C,
+    FRIDGE_MINUS_20,
+    FRIDGE_MINUS_80,
     PLATED_STRAIN,
     PROCURED_MATERIAL,
-    BOX,
-    FRIDGE_MINUS_80,
-    FRIDGE_MINUS_20,
-    FRIDGE_4C,
+    QUALIFICATION_DISCOVERED,
     SHELF,
+    SOLID_MEDIA_PLATE,
 )
-from .schema import InventoryImplementation, StorageCollection
-from .validation import (
-    validate_container_and_item,
-    validate_container_position,
-    validate_container_spec,
-    validate_storage_child,
-)
+from .schema import Asset, Capability, Facility, MaterialLot, PropertyValue, Reference, Zone
+
+Scalar = str | int | float | bool
 
 
-def make_fridge_minus80(uri: str) -> StorageCollection:
-    x = StorageCollection(uri)
-    x.storage_kind = FRIDGE_MINUS_80
-    x.temperature_c = -80
-    x.allowed_item_kinds = [BOX]
-    x.allowed_storage_kinds = [SHELF]
-    return x
+def make_facility(
+    identity: str,
+    *,
+    name: str | None = None,
+    description: str | None = None,
+) -> Facility:
+    return Facility(identity=identity, name=name, description=description)
 
 
-def make_fridge_minus20(uri: str) -> StorageCollection:
-    x = StorageCollection(uri)
-    x.storage_kind = FRIDGE_MINUS_20
-    x.temperature_c = -20
-    x.allowed_item_kinds = [BOX]
-    x.allowed_storage_kinds = [SHELF]
-    return x
+def make_zone(
+    identity: str,
+    *,
+    facility: Reference,
+    kind: str,
+    parent_zone: Reference | None = None,
+    policies: Iterable[str] | None = None,
+    conditions: Sequence[PropertyValue] | None = None,
+    name: str | None = None,
+    description: str | None = None,
+) -> Zone:
+    return Zone(
+        identity=identity,
+        facility=facility,
+        kind=kind,
+        parent_zone=parent_zone,
+        policies=policies,
+        conditions=conditions,
+        is_active=True,
+        name=name,
+        description=description,
+    )
 
 
-def make_fridge_4c(uri: str) -> StorageCollection:
-    x = StorageCollection(uri)
-    x.storage_kind = FRIDGE_4C
-    x.temperature_c = 4
-    x.allowed_item_kinds = [SOLID_MEDIA_PLATE]
-    x.allowed_storage_kinds = [SHELF]
-    return x
+def make_property(
+    kind: str,
+    value: Scalar,
+    *,
+    unit: str | None = None,
+    name: str | None = None,
+) -> PropertyValue:
+    """Create one typed scalar property without stringifying its value."""
+
+    kwargs: dict[str, object] = {}
+    if isinstance(value, bool):
+        kwargs["boolean_value"] = value
+    elif isinstance(value, int):
+        kwargs["integer_value"] = value
+    elif isinstance(value, float):
+        kwargs["real_value"] = value
+    elif isinstance(value, str) and value.startswith(("http://", "https://", "urn:")):
+        kwargs["uri_value"] = value
+    elif isinstance(value, str):
+        kwargs["text_value"] = value
+    else:
+        raise TypeError("Property values must be str, int, float, or bool")
+    return PropertyValue(kind=kind, unit=unit, name=name, **kwargs)
 
 
-def make_shelf(uri: str, label: Optional[str] = None) -> StorageCollection:
-    x = StorageCollection(uri)
-    x.storage_kind = SHELF
-    if label:
-        x.label = label
-    return x
+def make_capability(
+    kind: str,
+    *,
+    qualification: str = QUALIFICATION_DISCOVERED,
+    control_mode: str = CONTROL_UNSPECIFIED,
+    capacity_group: str | None = None,
+    parameters: Sequence[PropertyValue] | None = None,
+    name: str | None = None,
+    description: str | None = None,
+) -> Capability:
+    return Capability(
+        kind=kind,
+        qualification=qualification,
+        control_mode=control_mode,
+        capacity_group=capacity_group,
+        is_active=True,
+        parameters=parameters,
+        name=name,
+        description=description,
+    )
 
 
-def _init_container_layout(
-    x: InventoryImplementation,
-    rows: Sequence[str],
-    columns: Iterable[int],
-) -> None:
-    normalized_rows, normalized_cols = validate_container_spec(rows, columns)
-    x.allowed_rows = normalized_rows
-    x.allowed_columns = normalized_cols
+def make_asset(
+    identity: str,
+    *,
+    facility: Reference,
+    kind: str,
+    located_in: Reference | None = None,
+    position: str | None = None,
+    part_of: Reference | None = None,
+    establishes_zones: Iterable[Reference] | None = None,
+    manufacturer: str | None = None,
+    model: str | None = None,
+    serial_number: str | None = None,
+    allowed_positions: Iterable[str] | None = None,
+    capabilities: Sequence[Capability] | None = None,
+    name: str | None = None,
+    description: str | None = None,
+) -> Asset:
+    return Asset(
+        identity=identity,
+        facility=facility,
+        kind=kind,
+        located_in=located_in,
+        position=position,
+        part_of=part_of,
+        establishes_zones=establishes_zones,
+        manufacturer=manufacturer,
+        model=model,
+        serial_number=serial_number,
+        is_active=True,
+        allowed_positions=allowed_positions,
+        capabilities=capabilities,
+        name=name,
+        description=description,
+    )
+
+
+def make_material_lot(
+    identity: str,
+    *,
+    built: Reference,
+    facility: Reference,
+    kind: str,
+    located_in: Reference | None = None,
+    position: str | None = None,
+    barcode: str | None = None,
+    lot_id: str | None = None,
+    notes: str | None = None,
+    freeze_date: str | datetime | None = None,
+    name: str | None = None,
+    description: str | None = None,
+    derived_from: list[str] | None = None,
+    generated_by: list[str] | None = None,
+    measures: list[sbol3.SBOLObject] | None = None,
+) -> MaterialLot:
+    return MaterialLot(
+        identity=identity,
+        built=built,
+        inventory_kind=kind,
+        facility=facility,
+        located_in=located_in,
+        position=position,
+        is_active=True,
+        barcode=barcode,
+        lot_id=lot_id,
+        notes=notes,
+        freeze_date=freeze_date,
+        name=name,
+        description=description,
+        derived_from=derived_from,
+        generated_by=generated_by,
+        measures=measures,
+    )
+
+
+def grid_positions(rows: Sequence[str], columns: Iterable[int]) -> list[str]:
+    normalized_rows = [str(row).strip().upper() for row in rows]
+    normalized_columns = [int(column) for column in columns]
+    if not normalized_rows or any(len(row) != 1 or not row.isalpha() for row in normalized_rows):
+        raise ValueError("Rows must be non-empty single alphabetic labels")
+    if not normalized_columns or any(column < 1 for column in normalized_columns):
+        raise ValueError("Columns must be positive integers")
+    if len(normalized_rows) != len(set(normalized_rows)):
+        raise ValueError("Container rows must be unique")
+    if len(normalized_columns) != len(set(normalized_columns)):
+        raise ValueError("Container columns must be unique")
+    return [f"{row}{column}" for row in normalized_rows for column in normalized_columns]
+
+
+def make_fridge_minus80(
+    identity: str,
+    *,
+    facility: Reference,
+    located_in: Reference | None = None,
+    name: str | None = None,
+) -> Asset:
+    return make_asset(
+        identity,
+        facility=facility,
+        kind=FRIDGE_MINUS_80,
+        located_in=located_in,
+        name=name,
+    )
+
+
+def make_fridge_minus20(
+    identity: str,
+    *,
+    facility: Reference,
+    located_in: Reference | None = None,
+    name: str | None = None,
+) -> Asset:
+    return make_asset(
+        identity,
+        facility=facility,
+        kind=FRIDGE_MINUS_20,
+        located_in=located_in,
+        name=name,
+    )
+
+
+def make_fridge_4c(
+    identity: str,
+    *,
+    facility: Reference,
+    located_in: Reference | None = None,
+    name: str | None = None,
+) -> Asset:
+    return make_asset(
+        identity,
+        facility=facility,
+        kind=FRIDGE_4C,
+        located_in=located_in,
+        name=name,
+    )
+
+
+def make_shelf(
+    identity: str,
+    *,
+    facility: Reference,
+    part_of: Reference,
+    name: str | None = None,
+    allowed_positions: Iterable[str] | None = None,
+) -> Asset:
+    return make_asset(
+        identity,
+        facility=facility,
+        kind=SHELF,
+        part_of=part_of,
+        name=name,
+        allowed_positions=allowed_positions,
+    )
 
 
 def make_box(
-    uri: str,
-    box_md_uri: str,
+    identity: str,
+    *,
+    facility: Reference,
+    located_in: Reference | None = None,
+    position: str | None = None,
     rows: Sequence[str],
     columns: Iterable[int],
-    storage_uri: Optional[str] = None,
-    design_uri: Optional[str] = None,
-) -> InventoryImplementation:
-    """Create a physical inventory box implementation with explicit layout."""
-    x = InventoryImplementation(uri)
-    x.inventory_kind = BOX
-    x.built = box_md_uri
-    x.is_active = 1
-    _init_container_layout(x, rows=rows, columns=columns)
-    if storage_uri:
-        x.stored_at = storage_uri
-    if design_uri:
-        x.wasDerivedFrom = [design_uri]
-    return x
-
-
-def make_diluted_plasmid(
-    uri: str,
-    plasmid_cd_uri: str,
-    storage_uri: Optional[str] = None,
-    design_uri: Optional[str] = None,
-) -> InventoryImplementation:
-    x = InventoryImplementation(uri)
-    x.inventory_kind = DILUTED_PLASMID
-    x.built = plasmid_cd_uri
-    x.is_active = 1
-    if storage_uri:
-        x.stored_at = storage_uri
-    if design_uri:
-        x.wasDerivedFrom = [design_uri]
-    return x
-
-
-def make_bacterial_stock(
-    uri: str,
-    strain_md_uri: str,
-    storage_uri: Optional[str] = None,
-    design_uri: Optional[str] = None,
-) -> InventoryImplementation:
-    x = InventoryImplementation(uri)
-    x.inventory_kind = BACTERIAL_STOCK
-    x.built = strain_md_uri
-    x.is_active = 1
-    if storage_uri:
-        x.stored_at = storage_uri
-    if design_uri:
-        x.wasDerivedFrom = [design_uri]
-    return x
-
-
-def make_procured_material(
-    uri: str,
-    material_md_uri: str,
-    storage_uri: Optional[str] = None,
-    design_uri: Optional[str] = None,
-) -> InventoryImplementation:
-    x = InventoryImplementation(uri)
-    x.inventory_kind = PROCURED_MATERIAL
-    x.built = material_md_uri
-    x.is_active = 1
-    if storage_uri:
-        x.stored_at = storage_uri
-    if design_uri:
-        x.wasDerivedFrom = [design_uri]
-    return x
-
-
-def make_plated_strain(
-    uri: str,
-    strain_md_uri: str,
-    design_uri: Optional[str] = None,
-) -> InventoryImplementation:
-    x = InventoryImplementation(uri)
-    x.inventory_kind = PLATED_STRAIN
-    x.built = strain_md_uri
-    x.is_active = 1
-    if design_uri:
-        x.wasDerivedFrom = [design_uri]
-    return x
+    name: str | None = None,
+) -> Asset:
+    return make_asset(
+        identity,
+        facility=facility,
+        kind=BOX,
+        located_in=located_in,
+        position=position,
+        allowed_positions=grid_positions(rows, columns),
+        name=name,
+    )
 
 
 def make_solid_media_plate(
-    uri: str,
-    plate_md_uri: str,
+    identity: str,
+    *,
+    facility: Reference,
+    located_in: Reference | None = None,
+    position: str | None = None,
     rows: Sequence[str],
     columns: Iterable[int],
-    storage_uri: Optional[str] = None,
-    design_uri: Optional[str] = None,
-) -> InventoryImplementation:
-    x = InventoryImplementation(uri)
-    x.inventory_kind = SOLID_MEDIA_PLATE
-    x.built = plate_md_uri
-    x.is_active = 1
-    _init_container_layout(x, rows=rows, columns=columns)
-    if storage_uri:
-        x.stored_at = storage_uri
-    if design_uri:
-        x.wasDerivedFrom = [design_uri]
-    return x
-
-
-def make_single_well_petri_dish_plate(
-    uri: str,
-    plate_md_uri: str,
-    storage_uri: Optional[str] = None,
-    design_uri: Optional[str] = None,
-) -> InventoryImplementation:
-    """Create a single-well petri dish plate with a 1x1 A1 layout."""
-    return make_solid_media_plate(
-        uri=uri,
-        plate_md_uri=plate_md_uri,
-        rows=["A"],
-        columns=[1],
-        storage_uri=storage_uri,
-        design_uri=design_uri,
+    name: str | None = None,
+) -> Asset:
+    return make_asset(
+        identity,
+        facility=facility,
+        kind=SOLID_MEDIA_PLATE,
+        located_in=located_in,
+        position=position,
+        allowed_positions=grid_positions(rows, columns),
+        name=name,
     )
 
 
 def make_solid_96_well_plate(
-    uri: str,
-    plate_md_uri: str,
-    storage_uri: Optional[str] = None,
-    design_uri: Optional[str] = None,
-) -> InventoryImplementation:
-    """Create a square plate that exposes the standard 96-well A1-H12 positions."""
+    identity: str,
+    *,
+    facility: Reference,
+    located_in: Reference | None = None,
+    position: str | None = None,
+    name: str | None = None,
+) -> Asset:
     return make_solid_media_plate(
-        uri=uri,
-        plate_md_uri=plate_md_uri,
-        rows=["A", "B", "C", "D", "E", "F", "G", "H"],
+        identity,
+        facility=facility,
+        located_in=located_in,
+        position=position,
+        rows=list("ABCDEFGH"),
         columns=range(1, 13),
-        storage_uri=storage_uri,
-        design_uri=design_uri,
+        name=name,
     )
 
 
-def make_square_96_position_plate(
-    uri: str,
-    plate_md_uri: str,
-    storage_uri: Optional[str] = None,
-    design_uri: Optional[str] = None,
-) -> InventoryImplementation:
-    """Backward-compatible alias for :func:`make_solid_96_well_plate`."""
-    return make_solid_96_well_plate(
-        uri=uri,
-        plate_md_uri=plate_md_uri,
-        storage_uri=storage_uri,
-        design_uri=design_uri,
+def make_single_well_petri_dish_plate(
+    identity: str,
+    *,
+    facility: Reference,
+    located_in: Reference | None = None,
+    position: str | None = None,
+    name: str | None = None,
+) -> Asset:
+    return make_solid_media_plate(
+        identity,
+        facility=facility,
+        located_in=located_in,
+        position=position,
+        rows=["A"],
+        columns=[1],
+        name=name,
     )
 
 
-def _require_shared_document(*objects: InventoryImplementation | StorageCollection) -> None:
-    """Require graph mutations to operate on one document-backed graph."""
-    documents = [obj.doc for obj in objects]
-    if any(doc is None for doc in documents):
-        raise ValueError("Add all related objects to one document before changing inventory location")
-    if any(doc is not documents[0] for doc in documents[1:]):
+def make_diluted_plasmid(
+    identity: str, *, built: Reference, facility: Reference, **kwargs
+) -> MaterialLot:
+    return make_material_lot(
+        identity, built=built, facility=facility, kind=DILUTED_PLASMID, **kwargs
+    )
+
+
+def make_bacterial_stock(
+    identity: str, *, built: Reference, facility: Reference, **kwargs
+) -> MaterialLot:
+    return make_material_lot(
+        identity, built=built, facility=facility, kind=BACTERIAL_STOCK, **kwargs
+    )
+
+
+def make_procured_material(
+    identity: str, *, built: Reference, facility: Reference, **kwargs
+) -> MaterialLot:
+    return make_material_lot(
+        identity, built=built, facility=facility, kind=PROCURED_MATERIAL, **kwargs
+    )
+
+
+def make_plated_strain(
+    identity: str, *, built: Reference, facility: Reference, **kwargs
+) -> MaterialLot:
+    return make_material_lot(identity, built=built, facility=facility, kind=PLATED_STRAIN, **kwargs)
+
+
+def _require_shared_document(*objects: sbol3.Identified) -> None:
+    documents = [obj.document for obj in objects]
+    if any(document is None for document in documents):
+        raise ValueError("Add all related objects to one document before changing location")
+    if any(document is not documents[0] for document in documents[1:]):
         raise ValueError("All related objects must belong to the same document")
 
 
-def _clear_direct_storage_parent(child: InventoryImplementation | StorageCollection) -> None:
-    """Remove a child's previous direct Collection membership and inverse link."""
-    previous_parent_uri = (
-        child.parent_storage if isinstance(child, StorageCollection) else child.stored_at
+def _facility_identity(obj: Asset | MaterialLot | Zone) -> str:
+    return str(obj.facility) if obj.facility is not None else ""
+
+
+def locate(
+    item: Asset | MaterialLot,
+    location: Zone | Asset,
+    *,
+    position: str | None = None,
+    check_occupied: bool = True,
+) -> None:
+    """Locate an asset or material lot in one zone or container asset.
+
+    ``check_occupied=False`` supports bulk graph construction, but does not
+    bypass facility or coordinate checks. Final document validation still
+    rejects double occupancy.
+    """
+
+    _require_shared_document(item, location)
+    if str(item.identity) == str(location.identity):
+        raise ValueError("An object cannot be located in itself")
+    if _facility_identity(item) != _facility_identity(location):
+        raise ValueError("Located objects must belong to the same facility")
+    normalized_position = position.strip() if position is not None else None
+    if normalized_position == "":
+        raise ValueError("Position cannot be empty")
+    if isinstance(location, Zone) and normalized_position is not None:
+        raise ValueError("Positions belong to container assets, not zones")
+    allowed = (
+        {str(value) for value in location.allowed_positions}
+        if isinstance(location, Asset)
+        else set()
     )
-    if previous_parent_uri is None:
-        return
-
-    previous_parent = child.doc.find(str(previous_parent_uri))
-    if not isinstance(previous_parent, StorageCollection):
-        raise ValueError(
-            f"{child.identity} refers to missing storage parent {previous_parent_uri}"
-        )
-    previous_parent.members = [
-        member for member in previous_parent.members if str(member) != str(child.identity)
-    ]
-    if isinstance(child, StorageCollection):
-        child.parent_storage = None
-    else:
-        child.stored_at = None
-
-
-def add_child(parent: StorageCollection, child: InventoryImplementation | StorageCollection) -> None:
-    """Place a direct child in storage while maintaining one authoritative parent."""
-    _require_shared_document(parent, child)
-    validate_storage_child(parent, child)
-    _clear_direct_storage_parent(child)
-
-    if str(child.identity) not in {str(member) for member in parent.members}:
-        parent.members = list(parent.members) + [child.identity]
-    if isinstance(child, StorageCollection):
-        child.parent_storage = parent.identity
-        # A fridge defines the default physical-item policy for each shelf it owns.
-        if not list(child.allowed_item_kinds):
-            child.allowed_item_kinds = list(parent.allowed_item_kinds)
-    else:
-        child.stored_at = parent.identity
-
-
-def place_item(storage: StorageCollection, item: InventoryImplementation) -> None:
-    """Place an inventory item directly into a storage collection."""
-    add_child(storage, item)
+    if allowed and normalized_position is None:
+        raise ValueError(f"Location {location.identity} requires a position")
+    if normalized_position is not None and allowed and normalized_position not in allowed:
+        raise ValueError(f"Position {normalized_position} is not allowed in {location.identity}")
+    if normalized_position is not None and check_occupied:
+        for other in location.document.objects:
+            if other is item or not isinstance(other, (Asset, MaterialLot)):
+                continue
+            if (
+                other.located_in is not None
+                and str(other.located_in) == str(location.identity)
+                and other.position is not None
+                and str(other.position) == normalized_position
+            ):
+                raise ValueError(
+                    f"Position {normalized_position} in {location.identity} is occupied by "
+                    f"{other.identity}"
+                )
+    item.located_in = location.identity
+    item.position = normalized_position
 
 
 def place_in_container(
-    container: InventoryImplementation,
-    item: InventoryImplementation,
+    container: Asset,
+    item: Asset | MaterialLot,
     row: str,
     column: int,
     *,
     check_occupied: bool = True,
 ) -> None:
-    """Place an inventory item into a container implementation at row/column."""
-    _require_shared_document(container, item)
-    if str(container.identity) == str(item.identity):
-        raise ValueError("An inventory item cannot contain itself")
-    normalized_row, normalized_col = validate_container_position(container, row, column)
-    validate_container_and_item(container, item)
-
-    if check_occupied and container.doc is not None:
-        for existing in container.doc.implementations:
-            if not isinstance(existing, InventoryImplementation):
-                continue
-            if str(existing.identity) == str(item.identity):
-                continue
-            if (
-                str(existing.contained_in_container) == str(container.identity)
-                and str(existing.container_row) == normalized_row
-                and existing.container_column is not None
-                and int(existing.container_column) == normalized_col
-            ):
-                raise ValueError(
-                    f"Position {normalized_row}{normalized_col} in {container.identity} is occupied by "
-                    f"{existing.identity}"
-                )
-
-    _clear_direct_storage_parent(item)
-    item.contained_in_container = container.identity
-    item.container_row = normalized_row
-    item.container_column = normalized_col
+    position = f"{str(row).strip().upper()}{int(column)}"
+    locate(item, container, position=position, check_occupied=check_occupied)
 
 
 def place_in_plate(
-    plate: InventoryImplementation,
-    item: InventoryImplementation,
+    plate: Asset,
+    item: Asset | MaterialLot,
     well: str,
     *,
     check_occupied: bool = True,
 ) -> None:
-    """Compatibility helper for plate placement using a well string like A1."""
-    if not isinstance(well, str):
-        raise ValueError("Well must be provided as a string like 'A1'")
-
-    normalized_well = well.strip().upper()
-    if len(normalized_well) < 2:
+    normalized = str(well).strip().upper()
+    if len(normalized) < 2 or not normalized[0].isalpha() or not normalized[1:].isdigit():
         raise ValueError(f"Invalid well position '{well}'. Expected format like 'A1'.")
-
-    row = normalized_well[0]
-    column_str = normalized_well[1:]
-    if not row.isalpha() or not column_str.isdigit():
-        raise ValueError(f"Invalid well position '{well}'. Expected format like 'A1'.")
-
-    column = int(column_str)
-    place_in_container(plate, item, row=row, column=column, check_occupied=check_occupied)
+    place_in_container(
+        plate,
+        item,
+        row=normalized[0],
+        column=int(normalized[1:]),
+        check_occupied=check_occupied,
+    )
 
 
 def move_item(
-    item: InventoryImplementation,
-    new_container: InventoryImplementation,
+    item: Asset | MaterialLot,
+    new_container: Asset,
     row: str,
     column: int,
     *,
     check_occupied: bool = True,
 ) -> None:
-    """Move an already-placed item to a new container position."""
     place_in_container(
         new_container,
         item,
-        row=row,
-        column=column,
+        row,
+        column,
         check_occupied=check_occupied,
     )
 
 
-def remove_from_container(item: InventoryImplementation) -> None:
-    """Remove an item from whatever container position it currently occupies."""
-    item.contained_in_container = None
-    item.container_row = None
-    item.container_column = None
+def remove_from_container(item: Asset | MaterialLot) -> None:
+    item.located_in = None
+    item.position = None
 
 
-def discard_implementation(item: InventoryImplementation) -> None:
-    """Mark an inventory implementation as inactive/discarded."""
-    item.is_active = 0
+def discard(item: Asset | MaterialLot) -> None:
+    item.is_active = False
+
+
+# Compatibility names whose semantics remain honest in the new model.
+make_square_96_position_plate = make_solid_96_well_plate
+discard_implementation = discard
+place_item = locate
+
+
+def add_child(parent: Zone | Asset, child: Asset | MaterialLot) -> None:
+    """Compatibility helper for direct location without a container position."""
+
+    locate(child, parent)

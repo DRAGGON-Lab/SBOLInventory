@@ -3,20 +3,22 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "SBOLInventory"
-version = "0.1.0"
-description = "Python package for SBOL-based laboratory inventory management."
+name = "sbol-inventory"
+version = "0.2.0"
+description = "SBOL 3 facility catalogs, material custody, capabilities, and run provenance."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "sbol2",
+    "sbol3>=1.2,<2",
 ]
+
+[project.urls]
+Repository = "https://github.com/DRAGGON-Lab/SBOLInventory"
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
-    "jupyter",
-    "ipykernel",
+    "pytest>=7",
+    "ruff>=0.12",
 ]
 
 [tool.setuptools]
@@ -24,3 +26,13 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+sbol_inventory = ["py.typed"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
