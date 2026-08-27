@@ -73,7 +73,6 @@ class Capability(sbol3.CustomIdentified):
     KIND_URI = FACILITY_NS + "capabilityKind"
     QUALIFICATION_URI = FACILITY_NS + "qualification"
     CONTROL_MODE_URI = FACILITY_NS + "controlMode"
-    CAPACITY_GROUP_URI = FACILITY_NS + "capacityGroup"
     ACTIVE_URI = FACILITY_NS + "isActive"
     PARAMETER_URI = FACILITY_NS + "parameter"
 
@@ -84,7 +83,6 @@ class Capability(sbol3.CustomIdentified):
         kind: str | None = None,
         qualification: str | None = QUALIFICATION_DISCOVERED,
         control_mode: str | None = CONTROL_UNSPECIFIED,
-        capacity_group: str | None = None,
         is_active: bool | None = True,
         parameters: Sequence[PropertyValue] | None = None,
         name: str | None = None,
@@ -103,9 +101,6 @@ class Capability(sbol3.CustomIdentified):
         )
         self.control_mode = sbol3.URIProperty(
             self, self.CONTROL_MODE_URI, 0, 1, initial_value=control_mode
-        )
-        self.capacity_group = sbol3.TextProperty(
-            self, self.CAPACITY_GROUP_URI, 0, 1, initial_value=capacity_group
         )
         self.is_active = sbol3.BooleanProperty(self, self.ACTIVE_URI, 0, 1, initial_value=is_active)
         self.parameters = sbol3.OwnedObject(

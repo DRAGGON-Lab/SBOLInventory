@@ -34,6 +34,8 @@ The profile owns facility, zone, asset, material-lot, capability-offering, and r
 11. A run records used assets, input lots, generated output lots, material derivations, evidence attachments, and optionally the reviewed plan and executor.
 12. Turtle and RDF/XML round trips restore typed pySBOL3 extension objects.
 13. Unrelated standard SBOL `Implementation` objects remain valid and are not forced into the inventory profile.
+14. A versioned vocabulary, numbered rule catalog, SHACL projection, and valid/invalid RDF fixtures define conformance independently of Python.
+15. Every profile validation failure reports a stable `sbolinv-*` rule ID that another implementation can reproduce.
 
 ## EBEF acceptance example
 
@@ -52,6 +54,6 @@ The checked-in example is accepted when it validates, round-trips, exposes three
 
 ## Consumer boundary
 
-This project does not own a compiler or facility adoption roadmap. A consumer may use the Python implementation directly, or implement the same profile with another SBOL library. Cross-language consumers should test serialized RDF and validation behavior rather than copy Python-specific factories or query APIs.
+This project does not own a compiler or facility adoption roadmap. A consumer may use the Python implementation directly, or implement the same [versioned profile](spec/0.2/specification.md) with another SBOL library. Cross-language consumers should run the same conformance fixtures and compare serialized RDF and stable rule IDs rather than copy Python-specific factories or query APIs.
 
 Compiler-specific requirement IR, target configuration, allocation, scheduling, execution qualification, and rollout sequencing belong with that compiler. A Rust consumer should normally build profile support on `sbol-rs` before designing its compiler integration.

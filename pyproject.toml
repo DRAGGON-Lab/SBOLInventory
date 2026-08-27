@@ -17,8 +17,13 @@ Repository = "https://github.com/DRAGGON-Lab/SBOLInventory"
 
 [project.optional-dependencies]
 dev = [
+    "build>=1.2",
+    "pyshacl>=0.28,<1",
     "pytest>=7",
+    "rdflib>=6.3,<8",
     "ruff>=0.12",
+    "tomli>=2; python_version < '3.11'",
+    "twine>=5",
 ]
 
 [tool.setuptools]
@@ -29,6 +34,19 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 sbol_inventory = ["py.typed"]
+
+[tool.setuptools.data-files]
+"share/sbol-inventory/spec" = ["spec/README.md"]
+"share/sbol-inventory/spec/0.2" = [
+    "spec/0.2/conformance.md",
+    "spec/0.2/rules.toml",
+    "spec/0.2/shapes.ttl",
+    "spec/0.2/specification.md",
+    "spec/0.2/vocabulary.ttl",
+]
+"share/sbol-inventory/spec/0.2/fixtures" = ["spec/0.2/fixtures/manifest.toml"]
+"share/sbol-inventory/spec/0.2/fixtures/valid" = ["spec/0.2/fixtures/valid/*.ttl"]
+"share/sbol-inventory/spec/0.2/fixtures/invalid" = ["spec/0.2/fixtures/invalid/*.ttl"]
 
 [tool.ruff]
 line-length = 100

@@ -97,3 +97,24 @@ def test_run_records_assets_inputs_outputs_and_evidence():
             assets=[reader],
             plan=plan,
         )
+
+    with pytest.raises(ValueError, match=r"\[sbolinv-17003\]"):
+        record_run(
+            document,
+            NS + "run_without_asset",
+            assets=[],
+        )
+
+
+def test_material_derivation_rejects_an_indirect_cycle():
+    document = make_document()
+    facility = make_facility(NS + "facility")
+    first_design = sbol3.Component(NS + "first_design", sbol3.SBO_FUNCTIONAL_ENTITY)
+    second_design = sbol3.Component(NS + "second_design", sbol3.SBO_FUNCTIONAL_ENTITY)
+    first = make_bacterial_stock(NS + "first", built=first_design, facility=facility)
+    second = make_bacterial_stock(NS + "second", built=second_design, facility=facility)
+    add_all(document, [facility, first_design, second_design, first, second])
+
+    record_material_derivation(second, [first])
+    with pytest.raises(ValueError, match=r"\[sbolinv-16006\]"):
+        record_material_derivation(first, [second])

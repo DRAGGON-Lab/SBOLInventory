@@ -52,6 +52,7 @@ from .query import (
     qualification_rank,
     zones,
 )
+from .rules import QUERY_RULE_IDS, RULE_IDS, VALIDATOR_RULE_IDS
 from .schema import (
     Asset,
     Capability,
@@ -76,7 +77,10 @@ __all__ = [
     "InventoryValidationError",
     "MaterialLot",
     "PropertyValue",
+    "QUERY_RULE_IDS",
+    "RULE_IDS",
     "Zone",
+    "VALIDATOR_RULE_IDS",
     "add_all",
     "add_child",
     "assets",

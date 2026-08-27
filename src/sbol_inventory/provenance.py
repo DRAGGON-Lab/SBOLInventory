@@ -8,6 +8,7 @@ from datetime import datetime
 import sbol3
 
 from .namespaces import RUN_ASSET, RUN_INPUT_MATERIAL
+from .rules import MATERIAL_LINEAGE_RULE, RUN_REQUIRES_ASSET_RULE
 from .schema import Asset, MaterialLot
 
 
@@ -66,10 +67,31 @@ def record_material_derivation(
 
     if output.document is None:
         raise ValueError(f"Add {output.identity} to a document before recording derivation")
+    if output.inventory_kind is None:
+        raise ValueError(f"[{MATERIAL_LINEAGE_RULE}] A derivation output must be a MaterialLot")
     for material in inputs:
         _require_document_member(output.document, material)
-        if material is output:
-            raise ValueError("A material lot cannot derive from itself")
+        if material.inventory_kind is None:
+            raise ValueError(f"[{MATERIAL_LINEAGE_RULE}] A derivation input must be a MaterialLot")
+        if str(material.identity) == str(output.identity):
+            raise ValueError(f"[{MATERIAL_LINEAGE_RULE}] A material lot cannot derive from itself")
+
+        pending = [material]
+        visited: set[str] = set()
+        while pending:
+            current = pending.pop()
+            current_identity = str(current.identity)
+            if current_identity in visited:
+                continue
+            visited.add(current_identity)
+            for reference in current.derived_from:
+                source = output.document.find(str(reference))
+                if str(reference) == str(output.identity):
+                    raise ValueError(
+                        f"[{MATERIAL_LINEAGE_RULE}] Material derivation would create a cycle"
+                    )
+                if isinstance(source, MaterialLot):
+                    pending.append(source)
     existing = [str(value) for value in output.derived_from]
     additions = [str(material.identity) for material in inputs]
     output.derived_from = list(dict.fromkeys([*existing, *additions]))
@@ -94,6 +116,8 @@ def record_run(
 
     if document.find(identity) is not None:
         raise ValueError(f"Document already contains {identity}")
+    if not assets:
+        raise ValueError(f"[{RUN_REQUIRES_ASSET_RULE}] A profile run must name at least one asset")
     if (plan is None) != (executor is None):
         raise ValueError("plan and executor must be supplied together")
     related = [*assets, *input_materials, *output_materials, *evidence]

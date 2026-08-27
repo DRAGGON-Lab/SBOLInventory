@@ -33,7 +33,9 @@ SBOLInventory defines the persistent facility-catalog and run-ledger profile, wi
 
 ## Validation rules
 
-- Run both pySBOL3 core validation and `validate_inventory_graph` before writing.
+- Treat [`spec/0.2/specification.md`](spec/0.2/specification.md), `vocabulary.ttl`, and `rules.toml` as normative. README prose, Python classes, and examples are informative implementations of that contract.
+- Validate raw RDF with `shapes.ttl`, then run pySBOL3 core validation and `validate_inventory_graph`; no one layer substitutes for the others.
+- Preserve stable `sbolinv-*` rule IDs in errors, fixtures, and independent implementations.
 - Reject dangling or cross-facility references, hierarchy cycles, malformed typed properties, unknown qualification/control values, duplicate capability kinds on one asset, invalid positions, and double occupancy.
 - A duplicate capability on one asset is a modeling prompt: use child assets when the offerings are independently bindable.
 - Generic SBOL documents may contain ordinary `Implementation` objects. Apply inventory-specific requirements only when `materialKind` is present.

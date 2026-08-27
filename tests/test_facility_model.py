@@ -98,7 +98,6 @@ def test_ebef_shape_round_trips_as_typed_sbol3_extensions():
                     THERMAL_CYCLING,
                     qualification=QUALIFICATION_PLANNABLE,
                     control_mode=CONTROL_MANUAL,
-                    capacity_group=f"block_{index}",
                 )
             ],
         )
@@ -159,6 +158,89 @@ def test_qualified_asset_query_is_deterministic_and_respects_maturity():
         minimum_qualification=QUALIFICATION_EXECUTABLE,
     )
     assert [str(match.asset.identity) for match in matches] == [str(qualified.identity)]
+
+    all_matches = find_qualified_assets(
+        document,
+        ABSORBANCE_MEASUREMENT,
+        minimum_qualification=QUALIFICATION_PLANNABLE,
+    )
+    assert [str(match.asset.identity) for match in all_matches] == [
+        str(planned.identity),
+        str(qualified.identity),
+    ]
+    filtered_matches = find_qualified_assets(
+        document,
+        ABSORBANCE_MEASUREMENT,
+        minimum_qualification=QUALIFICATION_PLANNABLE,
+        facility=str(facility.identity),
+    )
+    assert filtered_matches == all_matches
+
+
+def test_candidate_query_respects_effective_activity_through_all_containment_edges():
+    document = make_document()
+    facility = make_facility(NS + "facility")
+    building = make_zone(NS + "building", facility=facility, kind=ROOM)
+    room = make_zone(
+        NS + "room",
+        facility=facility,
+        kind=ROOM,
+        parent_zone=building,
+    )
+    container = make_asset(
+        NS + "container",
+        facility=facility,
+        kind=INSTRUMENT,
+        located_in=room,
+    )
+    parent = make_asset(
+        NS + "parent",
+        facility=facility,
+        kind=INSTRUMENT,
+    )
+    child = make_asset(
+        NS + "child",
+        facility=facility,
+        kind=FUNCTIONAL_UNIT,
+        located_in=container,
+        part_of=parent,
+        capabilities=[
+            make_capability(
+                ABSORBANCE_MEASUREMENT,
+                qualification=QUALIFICATION_PLANNABLE,
+            )
+        ],
+    )
+    add_all(document, [facility, building, room, container, parent, child])
+    validate_document(document)
+
+    def matches():
+        return find_qualified_assets(document, ABSORBANCE_MEASUREMENT)
+
+    assert [match.asset for match in matches()] == [child]
+
+    building.is_active = False
+    assert matches() == []
+    building.is_active = True
+
+    container.is_active = False
+    assert matches() == []
+    container.is_active = True
+
+    parent.is_active = False
+    assert matches() == []
+
+
+def test_candidate_query_rejects_unknown_qualification_with_stable_rule_id():
+    document = make_document()
+    with pytest.raises(ValueError, match=r"\[sbolinv-18001\]"):
+        find_qualified_assets(
+            document,
+            ABSORBANCE_MEASUREMENT,
+            minimum_qualification="https://example.org/UnknownQualification",
+        )
+    with pytest.raises(ValueError, match=r"\[sbolinv-18002\]"):
+        find_qualified_assets(document, "relative-capability-kind")
 
 
 def test_zone_and_asset_cycles_are_rejected():

@@ -1,6 +1,6 @@
 # SBOLInventory
 
-SBOLInventory defines an SBOL 3 profile for describing a laboratory as a facility catalog and recording what happened there. This repository provides its pySBOL3 reference implementation:
+SBOLInventory defines an SBOL 3 profile for describing a laboratory as a facility catalog and recording what happened there. The versioned, language-neutral [Profile 0.2 specification](spec/0.2/specification.md) is the interoperability contract, and this repository provides its pySBOL3 reference implementation:
 
 > a facility contains zones<br>
 > zones locate assets and material lots<br>
@@ -158,7 +158,9 @@ A consumer written in another language should implement the profile over its nat
 
 ## Validation and serialization
 
-`validate_document` runs both pySBOL3's core validator and the facility-profile invariants. It rejects dangling facility, zone, asset, and material-design references; cross-facility containment; location or composition cycles; invalid container positions; double occupancy; malformed typed parameters or ontology IRIs; unknown qualification/control values; and ambiguous duplicate offerings on one asset.
+`validate_document` runs the procedural facility-profile validator and pySBOL3's core validator on a pySBOL3 `Document`. It rejects dangling facility, zone, asset, material-design, lineage, and run-usage references; cross-facility containment; location, composition, and lineage cycles; invalid container positions; double occupancy, including inactive occupants; malformed typed parameters or ontology IRIs; unknown qualification/control values; and ambiguous duplicate offerings on one asset. Every violation carries a stable `sbolinv-*` rule ID.
+
+Profile validation is deliberately two-layered: [SHACL Core shapes](spec/0.2/shapes.ttl) validate raw graph structure before an object library can normalize it, while `validate_inventory_graph` checks cross-object and graph invariants. A Full Validator claim also requires SBOL core validation. The implementation-neutral [rule catalog](spec/0.2/rules.toml), [fixture manifest](spec/0.2/fixtures/manifest.toml), and [conformance protocol](spec/0.2/conformance.md) keep the pySBOL3 and future `sbol-rs` implementations aligned by rule ID and RDF graph meaning.
 
 Turtle is the preferred human-readable form. RDF/XML is also supported:
 
@@ -172,4 +174,4 @@ Custom-class builders are registered automatically so a round trip restores `Fac
 
 The 0.2 API is a breaking migration from pySBOL2. See [MIGRATION.md](MIGRATION.md).
 
-For the profile rationale and implementation boundary, see [architecture.md](architecture.md).
+For the profile rationale and implementation boundary, see [architecture.md](architecture.md). For normative semantics, use the [versioned specification](spec/README.md).

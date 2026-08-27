@@ -3,3 +3,4 @@ include README.md
 include MIGRATION.md
 include architecture.md
 recursive-include examples *.py
+recursive-include spec *.md *.toml *.ttl

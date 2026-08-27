@@ -66,7 +66,6 @@ A capability kind is a stable operation IRI such as `LiquidHandling`, `ThermalCy
 - qualification level;
 - control mode;
 - active state;
-- capacity group, when useful to a planner;
 - typed parameters and units.
 
 The vocabulary is open. An adapter may introduce a domain IRI without modifying the schema. What remains closed and validated is the qualification ladder and the supported control-mode vocabulary, because silently accepting a misspelling there could authorize the wrong execution path. `UnspecifiedControl` represents an honest unknown and is the default; it is not treated as manual or machine-executable control.
@@ -118,13 +117,14 @@ Material transformations create new lot identities. They do not overwrite the in
 
 Validation is local and deterministic:
 
-1. The underlying SBOL library validates the core SBOL graph; this implementation uses pySBOL3.
-2. The profile implementation validates facility references, typed values, qualification/control vocabulary, location and composition cycles, container coordinates and occupancy, composite capability ambiguity, and material-design references.
-3. A consuming planner validates its capability mappings, feasibility constraints, and bindings.
-4. An execution backend validates dispatch parameters and hardware-specific safety conditions.
+1. SHACL Core validates raw RDF structure, cardinality, node kinds, datatypes, owned-object shape, and the closed qualification/control vocabularies before an object library can normalize malformed input.
+2. The underlying SBOL library validates the core SBOL graph; this implementation uses pySBOL3.
+3. The procedural profile validator applies the numbered cross-object and graph rules for facility equality, duplicate semantic kinds, location and composition cycles, container coordinates and occupancy, material lineage, and run-usage targets.
+4. A consuming planner validates its capability mappings, feasibility constraints, and bindings.
+5. An execution backend validates dispatch parameters and hardware-specific safety conditions.
 
 Passing one layer does not imply the next. In particular, a publicly described EBEF instrument is not automatically plannable or executable.
 
 ## Serialization
 
-Turtle is preferred for review and version control. RDF/XML remains available for systems that require it. Custom pySBOL3 builders restore typed extension classes on parse. The library does not depend on a network validator for ordinary reads or writes.
+Turtle is preferred for review and version control. RDF/XML remains available for systems that require it. Custom pySBOL3 builders restore typed extension classes on parse. The library does not depend on a network validator for ordinary reads or writes. The normative vocabulary, rule catalog, SHACL shapes, and valid/invalid fixtures live under [`spec/0.2`](spec/0.2/specification.md) and are packaged with source and wheel distributions.
