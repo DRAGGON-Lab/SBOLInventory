@@ -84,7 +84,7 @@ def record_material_derivation(
             if current_identity in visited:
                 continue
             visited.add(current_identity)
-            for reference in current.derived_from:
+            for reference in current.derived_from_material:
                 source = output.document.find(str(reference))
                 if str(reference) == str(output.identity):
                     raise ValueError(
@@ -92,9 +92,9 @@ def record_material_derivation(
                     )
                 if isinstance(source, MaterialLot):
                     pending.append(source)
-    existing = [str(value) for value in output.derived_from]
+    existing = [str(value) for value in output.derived_from_material]
     additions = [str(material.identity) for material in inputs]
-    output.derived_from = list(dict.fromkeys([*existing, *additions]))
+    output.derived_from_material = list(dict.fromkeys([*existing, *additions]))
 
 
 def record_run(

@@ -85,8 +85,10 @@ def test_run_records_assets_inputs_outputs_and_evidence():
     roles = {str(role) for usage in run.usage for role in usage.roles}
     assert roles == {RUN_ASSET, RUN_INPUT_MATERIAL}
     assert list(output_lot.generated_by) == [run.identity]
-    assert list(output_lot.derived_from) == [input_lot.identity]
+    assert list(output_lot.derived_from_material) == [input_lot.identity]
+    assert not output_lot.derived_from
     assert list(evidence.generated_by) == [run.identity]
+    assert list(evidence.attachments) == [attachment.identity]
     assert str(run.association[0].agent) == str(executor.identity)
     assert str(run.association[0].plan) == str(plan.identity)
 

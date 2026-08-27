@@ -27,7 +27,7 @@ SBOLInventory defines the persistent facility-catalog and run-ledger profile, wi
 - Treat public specifications as `described` at most and use `UnspecifiedControl` when the invocation path is not verified. Promotion to `plannable`, `simulatable`, `executable`, or `qualified` requires evidence from the corresponding integration stage.
 - Use `MaterialLot`, a standard SBOL `Implementation`, for physical samples and reagents. Its `built` reference must resolve to a standard SBOL `Component` design.
 - Do not represent instruments or empty labware as biological `Implementation` objects merely to make them physical.
-- Record transformations as new output lots with `wasDerivedFrom`; do not overwrite the input lot's identity and history.
+- Record transformations as new output lots with `fac:derivedFromMaterial`; do not overwrite the input lot's identity and history.
 - Use standard `Activity`, `Usage`, `Plan`, `Association`, `ExperimentalData`, and `Attachment` objects for execution provenance where possible.
 - Keep raw RDF/pySBOL3 access available through normal object and document APIs; typed helpers must not make interoperability impossible.
 

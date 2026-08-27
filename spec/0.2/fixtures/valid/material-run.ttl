@@ -52,7 +52,7 @@ ex:output_lot
     fac:facility ex:facility ;
     fac:locatedIn ex:room ;
     fac:isActive true ;
-    prov:wasDerivedFrom ex:input_lot ;
+    fac:derivedFromMaterial ex:input_lot ;
     prov:wasGeneratedBy ex:run .
 
 ex:evidence_file
@@ -66,7 +66,7 @@ ex:evidence
     a sbol:ExperimentalData ;
     sbol:displayId "evidence" ;
     sbol:hasNamespace <https://example.org/sbolinventory-run> ;
-    sbol:attachment ex:evidence_file ;
+    sbol:hasAttachment ex:evidence_file ;
     prov:wasGeneratedBy ex:run .
 
 ex:run

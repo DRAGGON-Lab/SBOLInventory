@@ -347,8 +347,8 @@ def _validate_material_lineage(
     edges: dict[str, set[str]] = {}
     for lot in lots.values():
         identity = str(lot.identity)
-        derived_from: set[str] = set()
-        for reference in lot.derived_from:
+        derived_from_material: set[str] = set()
+        for reference in lot.derived_from_material:
             source_identity = str(reference)
             source = document.find(source_identity)
             if not isinstance(source, MaterialLot) or source.inventory_kind is None:
@@ -362,8 +362,8 @@ def _validate_material_lineage(
                     MATERIAL_LINEAGE_RULE,
                     f"Material lot {identity} derives from itself",
                 )
-            derived_from.add(source_identity)
-        edges[identity] = derived_from
+            derived_from_material.add(source_identity)
+        edges[identity] = derived_from_material
 
     visited: set[str] = set()
     active: set[str] = set()

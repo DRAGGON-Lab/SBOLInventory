@@ -317,7 +317,8 @@ shape:MaterialLotShape
     sh:property [ sh:path fac:barcode ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:message "[sbolinv-10004] barcode must be a single string." ] ;
     sh:property [ sh:path fac:lotId ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:message "[sbolinv-10004] lotId must be a single string." ] ;
     sh:property [ sh:path fac:notes ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:message "[sbolinv-10004] notes must be a single string." ] ;
-    sh:property [ sh:path fac:freezeDate ; sh:maxCount 1 ; sh:datatype xsd:dateTime ; sh:message "[sbolinv-10004] freezeDate must be a single xsd:dateTime value." ] .
+    sh:property [ sh:path fac:freezeDate ; sh:maxCount 1 ; sh:datatype xsd:dateTime ; sh:message "[sbolinv-10004] freezeDate must be a single xsd:dateTime value." ] ;
+    sh:property [ sh:path fac:derivedFromMaterial ; sh:nodeKind sh:IRI ; sh:class sbol:Implementation ; sh:message "[sbolinv-16006] derivedFromMaterial must name a local MaterialLot." ] .
 
 shape:ProfileUsageShape
     a sh:NodeShape ;

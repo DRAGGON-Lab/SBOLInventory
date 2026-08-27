@@ -3,8 +3,9 @@ from pathlib import Path
 import pytest
 import sbol3
 from pyshacl import validate as validate_shacl
-from rdflib import Graph, URIRef
+from rdflib import Graph, Namespace, URIRef
 from rdflib.compare import isomorphic
+from rdflib.namespace import RDF
 
 try:
     import tomllib
@@ -36,6 +37,8 @@ RULE_CATALOG = _load_toml(SPECIFICATION / "rules.toml")
 FIXTURE_MANIFEST = _load_toml(FIXTURES / "manifest.toml")
 SHAPES = Graph().parse(SPECIFICATION / "shapes.ttl")
 VOCABULARY = Graph().parse(SPECIFICATION / "vocabulary.ttl")
+SBOL = Namespace("http://sbols.org/v3#")
+PROV = Namespace("http://www.w3.org/ns/prov#")
 
 
 def _shacl_result(graph: Graph) -> tuple[bool, str]:
@@ -135,6 +138,18 @@ def test_valid_fixture_conformance_and_round_trip(fixture: dict):
     serialized = document.write_string(sbol3.TURTLE)
     round_trip_graph = Graph().parse(data=serialized, format="turtle")
     assert isomorphic(source_graph, round_trip_graph)
+
+
+def test_valid_fixtures_use_valid_sbol_terms_and_implementation_provenance():
+    valid_fixtures = [
+        fixture for fixture in FIXTURE_MANIFEST["fixtures"] if fixture["expect"] == "valid"
+    ]
+    for fixture in valid_fixtures:
+        graph = Graph().parse(FIXTURES / fixture["path"])
+        assert not list(graph.triples((None, SBOL.attachment, None)))
+        for implementation in graph.subjects(RDF.type, SBOL.Implementation):
+            for source in graph.objects(implementation, PROV.wasDerivedFrom):
+                assert (source, RDF.type, SBOL.Component) in graph
 
 
 @pytest.mark.parametrize(

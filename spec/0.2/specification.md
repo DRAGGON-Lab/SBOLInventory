@@ -80,7 +80,7 @@ A conformant document is closed over each required structural reference:
 - `fac:establishesZone`;
 - `sbol:built` on a material lot;
 - profile run-usage entities;
-- `prov:wasDerivedFrom` on a material lot.
+- `fac:derivedFromMaterial` on a material lot.
 
 Those references MUST resolve to objects of the required type in the same RDF document. Open vocabulary values such as kinds, policies, parameter kinds, units, and control-independent ontology terms need not resolve locally.
 
@@ -184,7 +184,7 @@ A material lot is a standard `sbol:Implementation` carrying `fac:materialKind`. 
 | `fac:lotId` | 0..1 | `xsd:string` | Supplier or local lot label |
 | `fac:notes` | 0..1 | `xsd:string` | Human-readable note |
 | `fac:freezeDate` | 0..1 | `xsd:dateTime` | Recorded freezing timestamp |
-| `prov:wasDerivedFrom` | 0..* | local material lot | Material lineage |
+| `fac:derivedFromMaterial` | 0..* | local material lot | Material lineage |
 
 `barcode` and `lotId` are opaque labels. Profile 0.2 does not assign them global uniqueness semantics. A facility MAY impose stronger uniqueness policy.
 
@@ -240,7 +240,7 @@ A profile run is a `prov:Activity` that owns at least one `prov:Usage` carrying 
 
 A profile run MUST contain at least one `RunAsset` usage. Manual work can name a workstation or other facility asset when no instrument is involved.
 
-Generated material lots and `sbol:ExperimentalData` SHOULD refer to the run through `prov:wasGeneratedBy`. Material transformations SHOULD state their input lots with `prov:wasDerivedFrom`. Evidence files SHOULD use standard `sbol:Attachment` objects.
+Generated material lots and `sbol:ExperimentalData` SHOULD refer to the run through `prov:wasGeneratedBy`. Material transformations SHOULD state their input lots with `fac:derivedFromMaterial`. Evidence files SHOULD use standard `sbol:Attachment` objects.
 
 A reviewed plan and responsible agent MAY be represented with standard `prov:Association`, `prov:hadPlan`, and `prov:agent`. Those standard objects do not encode a compiler's private requirement or allocation IR.
 

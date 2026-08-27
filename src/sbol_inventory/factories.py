@@ -154,7 +154,7 @@ def make_material_lot(
     freeze_date: str | datetime | None = None,
     name: str | None = None,
     description: str | None = None,
-    derived_from: list[str] | None = None,
+    derived_from_material: Iterable[Reference] | None = None,
     generated_by: list[str] | None = None,
     measures: list[sbol3.SBOLObject] | None = None,
 ) -> MaterialLot:
@@ -172,7 +172,7 @@ def make_material_lot(
         freeze_date=freeze_date,
         name=name,
         description=description,
-        derived_from=derived_from,
+        derived_from_material=derived_from_material,
         generated_by=generated_by,
         measures=measures,
     )

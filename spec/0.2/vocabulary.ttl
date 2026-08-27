@@ -215,6 +215,12 @@ fac:materialKind
     rdfs:range rdfs:Resource ;
     rdfs:label "material kind"@en .
 
+fac:derivedFromMaterial
+    a rdf:Property ;
+    rdfs:domain sbol:Implementation ;
+    rdfs:range sbol:Implementation ;
+    rdfs:label "derived from material"@en .
+
 fac:barcode
     a rdf:Property ;
     rdfs:domain sbol:Implementation ;

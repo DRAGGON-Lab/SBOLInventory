@@ -389,7 +389,7 @@ strength = "required"
 machine_checkable = true
 shacl_core = false
 fixture = "fixtures/invalid/sbolinv-16006-material-lineage.ttl"
-statement = "Every wasDerivedFrom value on a MaterialLot MUST resolve to another document-local MaterialLot, and material lineage MUST contain no self-reference or cycle."
+statement = "Every derivedFromMaterial value on a MaterialLot MUST resolve to another document-local MaterialLot, and material lineage MUST contain no self-reference or cycle."
 
 [[rules]]
 id = "sbolinv-17001"

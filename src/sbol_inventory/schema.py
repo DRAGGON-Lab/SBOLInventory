@@ -12,6 +12,7 @@ from .namespaces import (
     ASSET,
     CAPABILITY_OFFERING,
     CONTROL_UNSPECIFIED,
+    DERIVED_FROM_MATERIAL,
     FACILITY,
     FACILITY_NS,
     PROPERTY_VALUE,
@@ -282,6 +283,7 @@ class MaterialLot(sbol3.Implementation):
     LOT_ID_URI = FACILITY_NS + "lotId"
     NOTES_URI = FACILITY_NS + "notes"
     FREEZE_DATE_URI = FACILITY_NS + "freezeDate"
+    DERIVED_FROM_MATERIAL_URI = DERIVED_FROM_MATERIAL
 
     def __init__(
         self,
@@ -300,7 +302,7 @@ class MaterialLot(sbol3.Implementation):
         namespace: str | None = None,
         name: str | None = None,
         description: str | None = None,
-        derived_from: list[str] | None = None,
+        derived_from_material: Iterable[Reference] | None = None,
         generated_by: list[str] | None = None,
         measures: list[sbol3.SBOLObject] | None = None,
         type_uri: str = sbol3.SBOL_IMPLEMENTATION,
@@ -311,7 +313,6 @@ class MaterialLot(sbol3.Implementation):
             namespace=namespace,
             name=name,
             description=description,
-            derived_from=derived_from,
             generated_by=generated_by,
             measures=measures,
             type_uri=type_uri,
@@ -332,6 +333,13 @@ class MaterialLot(sbol3.Implementation):
         self.notes = sbol3.TextProperty(self, self.NOTES_URI, 0, 1, initial_value=notes)
         self.freeze_date = sbol3.DateTimeProperty(
             self, self.FREEZE_DATE_URI, 0, 1, initial_value=freeze_date
+        )
+        self.derived_from_material = sbol3.ReferencedObject(
+            self,
+            self.DERIVED_FROM_MATERIAL_URI,
+            0,
+            math.inf,
+            initial_value=derived_from_material,
         )
 
 

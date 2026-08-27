@@ -105,10 +105,10 @@ prov:Activity (run) ──────────────┘
 ├── prov:Usage(role=RunInputMaterial) ─▶ input MaterialLot
 ├── generated output MaterialLot
 │   ├── prov:wasGeneratedBy ───────────▶ run
-│   └── prov:wasDerivedFrom ───────────▶ input MaterialLot(s)
+│   └── fac:derivedFromMaterial ───────▶ input MaterialLot(s)
 └── generated ExperimentalData
     ├── prov:wasGeneratedBy ───────────▶ run
-    └── sbol:attachment ───────────────▶ Attachment
+    └── sbol:hasAttachment ────────────▶ Attachment
 ```
 
 Material transformations create new lot identities. They do not overwrite the input lot and thereby destroy its history. Lifecycle or location mutations that matter operationally should likewise be represented as reviewed run outcomes or explicit custody events before this becomes a production LIMS.
