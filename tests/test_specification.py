@@ -115,7 +115,7 @@ def test_python_profile_terms_are_declared_and_capacity_group_is_not_defined():
         if (name == "TYPE_URI" or name.endswith("_URI")) and isinstance(value, str)
     }
     assert not (namespace_terms | schema_terms) - declared
-    assert "https://draggon.org/ns/facility#capacityGroup" not in declared
+    assert "https://sbol.io/ns/facility#capacityGroup" not in declared
     assert not hasattr(Capability, "CAPACITY_GROUP_URI")
 
 

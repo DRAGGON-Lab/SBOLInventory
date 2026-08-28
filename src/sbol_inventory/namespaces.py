@@ -1,10 +1,10 @@
 """Stable vocabulary terms used by the SBOLInventory profile."""
 
-INVENTORY_NS = "https://draggon.org/ns/inventory#"
-FACILITY_NS = "https://draggon.org/ns/facility#"
-CAPABILITY_NS = "https://draggon.org/ns/capability#"
+INVENTORY_NS = "https://sbol.io/ns/inventory#"
+FACILITY_NS = "https://sbol.io/ns/facility#"
+CAPABILITY_NS = "https://sbol.io/ns/capability#"
 PROFILE_VERSION = "0.2"
-PROFILE_IRI = "https://draggon.org/spec/sbol-inventory/0.2"
+PROFILE_IRI = "https://sbol.io/spec/sbol-inventory/0.2"
 
 # Backward-compatible name for the original extension namespace.
 EX = INVENTORY_NS

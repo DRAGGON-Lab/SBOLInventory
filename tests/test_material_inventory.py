@@ -32,7 +32,7 @@ def make_inventory():
     fridge = Asset(
         NS + "freezer",
         facility=facility,
-        kind="https://draggon.org/ns/inventory#FridgeMinus80C",
+        kind="https://sbol.io/ns/inventory#FridgeMinus80C",
         located_in=room,
         is_active=True,
     )
