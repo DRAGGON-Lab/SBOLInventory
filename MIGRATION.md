@@ -40,6 +40,12 @@ stock = make_bacterial_stock(
 
 Add related top-level objects to one document before using mutation helpers such as `locate`, `place_in_container`, or `move_item`.
 
+Only Zones carry `fac:facility`. Assets and materials use `locatedIn` to reference a Zone or another Asset; component assets without a direct location may inherit membership through `partOf`. Use `facility_identity(obj)` to query derived membership. Unlocated objects have no known facility, so put catalog residents in their actual zone or container before querying a facility.
+
+## Run and repository records
+
+Run helpers accept input and output Components alongside physical materials. Only new designs belong in generated Components; producing a lot from a design does not regenerate the design. `link_evidence` records `fac:forComponent` and shares the ExperimentalData Attachment references with its Component. `record_submission` and `record_retrieval` record completed repository transfers; callers remain responsible for network operations.
+
 ## Compatibility names
 
 The following names remain as narrow aliases where their semantics are still honest:
@@ -66,9 +72,3 @@ Migrate deliberately:
 5. Translate each authoritative location once; do not copy old inverse or duplicate membership edges.
 6. Assign public facts only `described` qualification until planning and execution evidence exists.
 7. Run `validate_document`, serialize to Turtle, read it back, and validate the parsed document before promoting the catalog.
-
-## September 2026 draft revision
-
-Remove `fac:facility` from every Asset and MaterialLot, and remove the `facility=` argument from their constructors and factory calls. Keep it on Zones. Give a located object `locatedIn` pointing to a Zone or another Asset; component assets without a direct location may inherit membership through `partOf`. Use `facility_identity(obj)` to query derived membership. Unlocated objects have no known facility, so put catalog residents in their actual zone or container before querying a facility.
-
-Run helpers accept input and output Components alongside physical materials. Only new designs belong in generated Components; producing a lot from a design does not regenerate the design. `link_evidence` records `fac:forComponent` and shares the ExperimentalData Attachment references with its Component. `record_submission` and `record_retrieval` record completed repository transfers; callers remain responsible for network operations.
