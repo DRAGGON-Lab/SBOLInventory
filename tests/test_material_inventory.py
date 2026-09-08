@@ -31,20 +31,17 @@ def make_inventory():
     room = make_zone(NS + "room", facility=facility, kind=ROOM)
     fridge = Asset(
         NS + "freezer",
-        facility=facility,
         kind="https://sbol.io/ns/inventory#FridgeMinus80C",
         located_in=room,
         is_active=True,
     )
     shelf = make_shelf(
         NS + "shelf",
-        facility=facility,
         part_of=fridge,
         allowed_positions=["BOX-1", "BOX-2"],
     )
     box_a = make_box(
         NS + "box_a",
-        facility=facility,
         located_in=shelf,
         position="BOX-1",
         rows=["A", "B"],
@@ -52,7 +49,6 @@ def make_inventory():
     )
     box_b = make_box(
         NS + "box_b",
-        facility=facility,
         located_in=shelf,
         position="BOX-2",
         rows=["A", "B"],
@@ -62,7 +58,6 @@ def make_inventory():
     lot = make_bacterial_stock(
         NS + "stock_1",
         built=strain,
-        facility=facility,
         barcode="stock-1",
     )
     add_all(document, [facility, room, fridge, shelf, box_a, box_b, strain, lot])
@@ -101,7 +96,6 @@ def test_occupancy_move_and_lifecycle_invariants_are_preserved():
     second = make_bacterial_stock(
         NS + "stock_2",
         built=second_design,
-        facility=facility,
     )
     add_all(document, [second_design, second])
     place_in_container(box_a, lot, "A", 1)
@@ -145,3 +139,23 @@ def test_generic_sbol_implementation_is_not_forced_into_inventory_profile():
     assert isinstance(parsed_implementation, MaterialLot)
     assert parsed_implementation.inventory_kind is None
     assert parsed_implementation.is_active is None
+
+
+def test_nested_custody_derives_facility_and_moving_container_updates_descendants():
+    from sbol_inventory import assets, facility_identity, locate, material_lots
+
+    document, facility, box_a, _, lot = make_inventory()
+    place_in_container(box_a, lot, "A", 1)
+    assert facility_identity(lot) == str(facility.identity)
+    assert lot in material_lots(document, facility)
+    second = make_facility(NS + "second")
+    room = make_zone(NS + "second_room", facility=second, kind=ROOM)
+    add_all(document, [second, room])
+    locate(box_a, room)
+    validate_document(document)
+    assert facility_identity(lot) == str(second.identity)
+    assert box_a in assets(document, second)
+    assert lot in material_lots(document, second)
+    assert lot not in material_lots(document, facility)
+    assert not box_a._properties.get("https://sbol.io/ns/facility#facility")
+    assert not lot._properties.get("https://sbol.io/ns/facility#facility")

@@ -20,6 +20,7 @@ SBOLInventory defines the persistent facility-catalog and run-ledger profile, wi
 - Use pySBOL3 and SBOL 3 vocabulary. Do not reintroduce pySBOL2 classes or global configuration.
 - Use `Facility` for a governed site and `Zone` for spatial, environmental, containment, storage, or policy boundaries.
 - Use `Asset` for instruments, storage units, labware containers, workstations, and independently schedulable functional units.
+- Only Zones serialize `facility`; derive Asset and MaterialLot membership through containment.
 - Use `located_in` for direct location, `parent_zone` for nested boundaries, `part_of` for physical composition, and `establishes_zones` for a chamber or controller's interior. Do not duplicate inverse edges.
 - Put manufacturer/model facts on `Asset`. Put operation kind, typed constraints, control mode, and qualification on its owned `Capability` offering.
 - Model separately reservable capacity as child assets. Do not collapse three independent blocks or modules into a product-specific count field.

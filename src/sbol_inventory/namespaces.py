@@ -115,4 +115,11 @@ RUN_ASSET = FACILITY_NS + "RunAsset"
 RUN_INPUT_MATERIAL = FACILITY_NS + "RunInputMaterial"
 
 
+RUN_COMPONENT = FACILITY_NS + "RunComponent"
+EXPERIMENTAL_DATA_DATABASE = FACILITY_NS + "ExperimentalDataDatabase"
+METADATA_DATABASE = FACILITY_NS + "MetadataDatabase"
+FOR_COMPONENT = FACILITY_NS + "forComponent"
+SUBMITTED_TO = FACILITY_NS + "submittedTo"
+RETRIEVED_FROM = FACILITY_NS + "retrievedFrom"
+
 __all__ = sorted(name for name in globals() if name.isupper() and not name.startswith("_"))

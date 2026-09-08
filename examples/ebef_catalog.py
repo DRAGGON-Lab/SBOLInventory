@@ -162,7 +162,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
 
     chamber_1 = make_asset(
         ns + "anaerobic_chamber_1",
-        facility=ebef,
         kind=ENVIRONMENT_CONTROLLER,
         located_in=microbiology,
         establishes_zones=[chamber_1_interior],
@@ -173,7 +172,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
     )
     chamber_2 = make_asset(
         ns + "anaerobic_chamber_2",
-        facility=ebef,
         kind=ENVIRONMENT_CONTROLLER,
         located_in=microbiology,
         establishes_zones=[chamber_2_interior],
@@ -185,7 +183,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
 
     microlab_prep = make_asset(
         ns + "microlab_prep",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=chamber_1_interior,
         manufacturer="Hamilton",
@@ -202,7 +199,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
     )
     potentiostat = make_asset(
         ns + "potentiostat_96_well",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=chamber_1_interior,
         capabilities=[
@@ -216,7 +212,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
     )
     chamber_2_centrifuge = make_asset(
         ns + "anaerobic_swinging_bucket_centrifuge",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=chamber_2_interior,
         capabilities=[described(CENTRIFUGATION)],
@@ -225,7 +220,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
 
     dragonfly = make_asset(
         ns + "dragonfly_confocal",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=microscopy,
         model="Dragonfly spinning disk confocal",
@@ -242,7 +236,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
     )
     plasma_cleaner = make_asset(
         ns + "plasma_cleaner",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=microscopy,
         capabilities=[described(PLASMA_CLEANING)],
@@ -261,7 +254,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
         shaking_incubators.append(
             make_asset(
                 ns + f"eppendorf_s44i_{index}",
-                facility=ebef,
                 kind=INSTRUMENT,
                 located_in=microbiology,
                 manufacturer="Eppendorf",
@@ -278,7 +270,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
         )
     static_incubator = make_asset(
         ns + "static_incubator_group",
-        facility=ebef,
         kind=WORKSTATION,
         located_in=microbiology,
         capabilities=[
@@ -294,7 +285,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
 
     epoch = make_asset(
         ns + "biotek_epoch_2",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=microbiology,
         manufacturer="Agilent BioTek",
@@ -317,7 +307,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
 
     proflex = make_asset(
         ns + "proflex",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=microbiology,
         model="ProFlex PCR System",
@@ -327,7 +316,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
     proflex_blocks = [
         make_asset(
             ns + f"proflex_block_{index}",
-            facility=ebef,
             kind=FUNCTIONAL_UNIT,
             part_of=proflex,
             capabilities=[
@@ -344,7 +332,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
 
     gel_imager = make_asset(
         ns + "azure_300",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=microbiology,
         model="Azure 300",
@@ -353,7 +340,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
     )
     electrophoresis = make_asset(
         ns + "electrophoresis_station",
-        facility=ebef,
         kind=WORKSTATION,
         located_in=microbiology,
         capabilities=[described(ELECTROPHORESIS)],
@@ -361,7 +347,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
     )
     media_prep_station = make_asset(
         ns + "media_prep_station",
-        facility=ebef,
         kind=WORKSTATION,
         located_in=media_prep,
         capabilities=[
@@ -373,7 +358,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
     )
     cold_storage = make_asset(
         ns + "cold_storage_group",
-        facility=ebef,
         kind=STORAGE_ASSET,
         located_in=freezer_room,
         capabilities=[
@@ -387,7 +371,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
     )
     main_bsc = make_asset(
         ns + "main_biosafety_cabinet",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=microbiology,
         capabilities=[described(BIOSAFETY_CONTAINMENT, prop("width_feet", 6.0))],
@@ -395,7 +378,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
     )
     main_autoclave = make_asset(
         ns + "amsco_630ls",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=microbiology,
         model="AMSCO 630LS",
@@ -421,7 +403,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
         )
         chamber = make_asset(
             ns + identity,
-            facility=ebef,
             kind=ENVIRONMENT_CONTROLLER,
             located_in=plant_lab,
             establishes_zones=[interior],
@@ -444,7 +425,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
 
     plant_bsc = make_asset(
         ns + "plant_biosafety_cabinet",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=plant_lab,
         capabilities=[described(BIOSAFETY_CONTAINMENT, prop("width_feet", 4.0))],
@@ -452,7 +432,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
     )
     plant_autoclave = make_asset(
         ns + "plant_autoclave",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=plant_lab,
         capabilities=[

@@ -13,18 +13,28 @@ runs record material changes and evidence
 
 This is one end-to-end domain model with a deliberate implementation boundary. The profile describes persistent facts about facilities and executions. Workflow systems own program order, material ownership, planning, scheduling, and dispatch. Stable RDF identities connect those concerns without requiring a consumer to adopt this repository's Python object model.
 
+Only Zones serialize `fac:facility`. Assets and MaterialLots derive membership through location, with `partOf` as the fallback for component assets. Unlocated objects have no known facility.
+
 ## Persistent facility graph
 
-```text
-Facility
-├── Zone ──parentZone──▶ Zone
-├── Asset ──locatedIn──▶ Zone or container Asset
-│   ├── CapabilityOffering
-│   │   └── PropertyValue*
-│   ├── partOf ─────────▶ parent Asset
-│   └── establishesZone ▶ controlled Zone
-└── MaterialLot ─locatedIn▶ Zone or container Asset
-    └── sbol:built ───────▶ sbol:Component
+```mermaid
+graph TD
+    Zone -->|facility| Facility
+    Zone -->|parentZone| ParentZone[Zone]
+    Asset -->|locatedIn| Zone
+    Asset -->|locatedIn| Container[Asset]
+    Asset -->|partOf| ParentAsset[Asset]
+    Asset -->|establishesZone| ControlledZone[Zone]
+    Asset -->|capability| CapabilityOffering
+    MaterialLot -->|locatedIn| Container
+    MaterialLot -->|built| Component
+    Run[PROV Activity] -->|uses| Asset
+    Run -->|uses / generates| MaterialLot
+    Run -->|uses / generates| Component
+    Run -->|generates| ExperimentalData
+    ExperimentalData -->|forComponent| Component
+    ExperimentalData -->|submittedTo| ExperimentalDataDatabase
+    Component -->|submittedTo / retrievedFrom| MetadataDatabase
 ```
 
 All persistent domain nodes are addressable by IRIs. `Facility`, `Zone`, and `Asset` are custom SBOL 3 `TopLevel` types. A capability and each typed parameter are owned `Identified` objects because their identity and lifecycle are scoped to the installed asset that makes the offering.
@@ -52,7 +62,7 @@ Independently schedulable capacity is modeled as child assets, not an integer on
 
 ## Designs and material lots
 
-SBOL `Component` describes what a biological or chemical thing is. SBOL `Implementation` describes a physical realization. `MaterialLot` subclasses pySBOL3's standard `Implementation` in Python and retains the standard `sbol:Implementation` RDF type, adding only inventory-profile properties such as facility, location, barcode, lot identifier, freeze date, and lifecycle state.
+SBOL `Component` describes what a biological or chemical thing is. SBOL `Implementation` describes a physical realization. `MaterialLot` subclasses pySBOL3's standard `Implementation` in Python and retains the standard `sbol:Implementation` RDF type, adding only inventory-profile properties such as location, barcode, lot identifier, freeze date, and lifecycle state.
 
 That choice is important for interoperability. Generic SBOL software still sees a normal `Implementation`, while an inventory-aware reader gets a typed `MaterialLot`. Standard implementations with no `materialKind` remain outside the facility-profile validation rules.
 

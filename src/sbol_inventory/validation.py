@@ -8,8 +8,20 @@ from typing import TypeVar
 from urllib.parse import urlparse
 
 import sbol3
+from rdflib import URIRef
 
-from .namespaces import CONTROL_MODES, QUALIFICATION_ORDER, RUN_ASSET, RUN_INPUT_MATERIAL
+from .digital import ExperimentalDataDatabase, MetadataDatabase
+from .location import facility_identity
+from .namespaces import (
+    CONTROL_MODES,
+    FOR_COMPONENT,
+    QUALIFICATION_ORDER,
+    RETRIEVED_FROM,
+    RUN_ASSET,
+    RUN_COMPONENT,
+    RUN_INPUT_MATERIAL,
+    SUBMITTED_TO,
+)
 from .rules import (
     ASSET_ACTIVE_RULE,
     ASSET_ALLOWED_POSITION_RULE,
@@ -25,6 +37,7 @@ from .rules import (
     CAPABILITY_OWNER_RULE,
     CAPABILITY_PARAMETER_KIND_RULE,
     CAPABILITY_QUALIFICATION_RULE,
+    EVIDENCE_COMPONENT_RULE,
     LOCATION_FACILITY_RULE,
     LOCATION_OCCUPANCY_RULE,
     LOCATION_POSITION_RULE,
@@ -38,10 +51,13 @@ from .rules import (
     PROPERTY_OWNER_RULE,
     PROPERTY_UNIT_RULE,
     PROPERTY_VALUE_RULE,
+    RETRIEVAL_RULE,
     RUN_ASSET_RULE,
+    RUN_COMPONENT_RULE,
     RUN_INPUT_MATERIAL_RULE,
     RUN_REQUIRES_ASSET_RULE,
     SBOL_CORE_RULE,
+    SUBMISSION_RULE,
     ZONE_ACTIVE_RULE,
     ZONE_CONDITION_KIND_RULE,
     ZONE_CYCLE_RULE,
@@ -101,13 +117,6 @@ def _require_iri(value, label: str, rule_id: str) -> str:
             f"{label} must be an absolute IRI, found {text!r}",
         )
     return text
-
-
-def _facility_identity(obj: Zone | Asset | MaterialLot, rule_id: str) -> str:
-    identity = _identity(obj.facility)
-    if identity is None:
-        raise InventoryValidationError(rule_id, f"{obj.identity} does not name its facility")
-    return identity
 
 
 def _validate_property(value: PropertyValue, owner: str) -> None:
@@ -274,13 +283,6 @@ def _validate_location(
             LOCATION_FACILITY_RULE,
             f"{obj.identity} location {location_uri} is not a document-local Zone or Asset",
         )
-    if _facility_identity(obj, LOCATION_FACILITY_RULE) != _facility_identity(
-        location, LOCATION_FACILITY_RULE
-    ):
-        raise InventoryValidationError(
-            LOCATION_FACILITY_RULE,
-            f"{obj.identity} and location {location.identity} belong to different facilities",
-        )
     if isinstance(location, Zone):
         if position is not None:
             raise InventoryValidationError(
@@ -418,11 +420,50 @@ def _validate_profile_runs(document: sbol3.Document) -> None:
                         RUN_INPUT_MATERIAL_RULE,
                         f"Run {obj.identity} input usage does not refer to a MaterialLot",
                     )
+            if RUN_COMPONENT in roles:
+                profile_usage_count += 1
+                _require_reference(
+                    document,
+                    usage.entity,
+                    sbol3.Component,
+                    f"Run {obj.identity} component usage entity",
+                    RUN_COMPONENT_RULE,
+                )
         if profile_usage_count and not run_asset_count:
             raise InventoryValidationError(
                 RUN_REQUIRES_ASSET_RULE,
                 f"Profile run {obj.identity} has no RunAsset usage",
             )
+
+
+def _validate_digital_links(document: sbol3.Document) -> None:
+    for obj in document.objects:
+        for predicate, rule in (
+            (FOR_COMPONENT, EVIDENCE_COMPONENT_RULE),
+            (SUBMITTED_TO, SUBMISSION_RULE),
+            (RETRIEVED_FROM, RETRIEVAL_RULE),
+        ):
+            for value in obj._properties.get(predicate, ()):
+                target = document.find(str(value)) if isinstance(value, URIRef) else None
+                if predicate == FOR_COMPONENT:
+                    valid = isinstance(obj, sbol3.ExperimentalData) and isinstance(
+                        target, sbol3.Component
+                    )
+                elif predicate == RETRIEVED_FROM:
+                    valid = isinstance(obj, sbol3.Component) and isinstance(
+                        target, MetadataDatabase
+                    )
+                else:
+                    valid = (
+                        isinstance(obj, sbol3.ExperimentalData)
+                        and isinstance(target, ExperimentalDataDatabase)
+                        or isinstance(obj, sbol3.Component)
+                        and isinstance(target, MetadataDatabase)
+                    )
+                if not valid:
+                    raise InventoryValidationError(
+                        rule, f"Invalid {predicate} link on {obj.identity}: {value}"
+                    )
 
 
 def validate_inventory_graph(document: sbol3.Document) -> None:
@@ -462,9 +503,7 @@ def validate_inventory_graph(document: sbol3.Document) -> None:
                 f"Zone {zone.identity} parent",
                 ZONE_PARENT_RULE,
             )
-            if _facility_identity(parent, ZONE_PARENT_RULE) != _facility_identity(
-                zone, ZONE_PARENT_RULE
-            ):
+            if facility_identity(parent) != facility_identity(zone):
                 raise InventoryValidationError(
                     ZONE_PARENT_RULE,
                     f"Zone {zone.identity} and its parent belong to different facilities",
@@ -488,13 +527,11 @@ def validate_inventory_graph(document: sbol3.Document) -> None:
     )
 
     for asset in assets:
-        _require_reference(
-            document,
-            asset.facility,
-            Facility,
-            f"Asset {asset.identity} facility",
-            ASSET_FACILITY_RULE,
-        )
+        if asset._properties.get(Zone.FACILITY_URI):
+            raise InventoryValidationError(
+                ASSET_FACILITY_RULE,
+                f"Asset {asset.identity} must derive its facility through a Zone",
+            )
         if asset.kind is None:
             raise InventoryValidationError(ASSET_KIND_RULE, f"Asset {asset.identity} has no kind")
         _require_iri(asset.kind, f"Asset {asset.identity} kind", ASSET_KIND_RULE)
@@ -522,8 +559,10 @@ def validate_inventory_graph(document: sbol3.Document) -> None:
                 f"Asset {asset.identity} parent",
                 ASSET_PART_OF_RULE,
             )
-            if _facility_identity(parent, ASSET_PART_OF_RULE) != _facility_identity(
-                asset, ASSET_PART_OF_RULE
+            if (
+                facility_identity(parent) is not None
+                and facility_identity(asset) is not None
+                and facility_identity(parent) != facility_identity(asset)
             ):
                 raise InventoryValidationError(
                     ASSET_PART_OF_RULE,
@@ -537,9 +576,7 @@ def validate_inventory_graph(document: sbol3.Document) -> None:
                 f"Asset {asset.identity} established zone",
                 ASSET_ESTABLISHES_ZONE_RULE,
             )
-            if _facility_identity(zone, ASSET_ESTABLISHES_ZONE_RULE) != _facility_identity(
-                asset, ASSET_ESTABLISHES_ZONE_RULE
-            ):
+            if facility_identity(zone) != facility_identity(asset):
                 raise InventoryValidationError(
                     ASSET_ESTABLISHES_ZONE_RULE,
                     f"Asset {asset.identity} establishes a zone in another facility",
@@ -564,13 +601,11 @@ def validate_inventory_graph(document: sbol3.Document) -> None:
 
     for lot in material_lots:
         _require_iri(lot.inventory_kind, f"Material lot {lot.identity} kind", MATERIAL_KIND_RULE)
-        _require_reference(
-            document,
-            lot.facility,
-            Facility,
-            f"Material lot {lot.identity} facility",
-            MATERIAL_FACILITY_RULE,
-        )
+        if lot._properties.get(Zone.FACILITY_URI):
+            raise InventoryValidationError(
+                MATERIAL_FACILITY_RULE,
+                f"Material lot {lot.identity} must derive its facility through a Zone",
+            )
         if lot.built is None:
             raise InventoryValidationError(
                 MATERIAL_BUILT_RULE,
@@ -592,6 +627,7 @@ def validate_inventory_graph(document: sbol3.Document) -> None:
 
     _validate_material_lineage(document, material_lots)
     _validate_profile_runs(document)
+    _validate_digital_links(document)
 
 
 def validate_document(document: sbol3.Document) -> None:

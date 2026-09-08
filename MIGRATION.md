@@ -17,14 +17,13 @@ Version 0.2 is a breaking move from pySBOL2/SBOL 2 to pySBOL3/SBOL 3 and from a 
 
 ## Factory changes
 
-Factories now take an identity and explicit facility context:
+Zones take explicit facility context; assets and materials take their physical location:
 
 ```python
 facility = make_facility(ns + "facility")
 room = make_zone(ns + "freezer_room", facility=facility, kind=STORAGE_ZONE)
 freezer = make_fridge_minus80(
     ns + "freezer_1",
-    facility=facility,
     located_in=room,
 )
 ```
@@ -36,7 +35,6 @@ design = sbol3.Component(ns + "strain_design", sbol3.SBO_FUNCTIONAL_ENTITY)
 stock = make_bacterial_stock(
     ns + "stock_1",
     built=design,
-    facility=facility,
 )
 ```
 
@@ -68,3 +66,9 @@ Migrate deliberately:
 5. Translate each authoritative location once; do not copy old inverse or duplicate membership edges.
 6. Assign public facts only `described` qualification until planning and execution evidence exists.
 7. Run `validate_document`, serialize to Turtle, read it back, and validate the parsed document before promoting the catalog.
+
+## September 2026 draft revision
+
+Remove `fac:facility` from every Asset and MaterialLot, and remove the `facility=` argument from their constructors and factory calls. Keep it on Zones. Give a located object `locatedIn` pointing to a Zone or another Asset; component assets without a direct location may inherit membership through `partOf`. Use `facility_identity(obj)` to query derived membership. Unlocated objects have no known facility, so put catalog residents in their actual zone or container before querying a facility.
+
+Run helpers accept input and output Components alongside physical materials. Only new designs belong in generated Components; producing a lot from a design does not regenerate the design. `link_evidence` records `fac:forComponent` and shares the ExperimentalData Attachment references with its Component. `record_submission` and `record_retrieval` record completed repository transfers; callers remain responsible for network operations.

@@ -191,7 +191,6 @@ class Asset(sbol3.CustomTopLevel):
     """A physical resource, container, instrument, or functional unit."""
 
     TYPE_URI = ASSET
-    FACILITY_URI = FACILITY_NS + "facility"
     KIND_URI = FACILITY_NS + "assetKind"
     LOCATED_IN_URI = FACILITY_NS + "locatedIn"
     POSITION_URI = FACILITY_NS + "position"
@@ -208,7 +207,6 @@ class Asset(sbol3.CustomTopLevel):
         self,
         identity: str | None = None,
         *,
-        facility: Reference | None = None,
         kind: str | None = None,
         located_in: Reference | None = None,
         position: str | None = None,
@@ -229,9 +227,6 @@ class Asset(sbol3.CustomTopLevel):
             type_uri=type_uri,
             name=name,
             description=description,
-        )
-        self.facility = sbol3.ReferencedObject(
-            self, self.FACILITY_URI, 0, 1, initial_value=facility
         )
         self.kind = sbol3.URIProperty(self, self.KIND_URI, 0, 1, initial_value=kind)
         self.located_in = sbol3.ReferencedObject(
@@ -275,7 +270,6 @@ class MaterialLot(sbol3.Implementation):
     """A physical sample or reagent lot represented by SBOL Implementation."""
 
     INVENTORY_KIND_URI = FACILITY_NS + "materialKind"
-    FACILITY_URI = FACILITY_NS + "facility"
     LOCATED_IN_URI = FACILITY_NS + "locatedIn"
     POSITION_URI = FACILITY_NS + "position"
     ACTIVE_URI = FACILITY_NS + "isActive"
@@ -291,7 +285,6 @@ class MaterialLot(sbol3.Implementation):
         built: Reference | None = None,
         *,
         inventory_kind: str | None = None,
-        facility: Reference | None = None,
         located_in: Reference | None = None,
         position: str | None = None,
         is_active: bool | None = True,
@@ -319,9 +312,6 @@ class MaterialLot(sbol3.Implementation):
         )
         self.inventory_kind = sbol3.URIProperty(
             self, self.INVENTORY_KIND_URI, 0, 1, initial_value=inventory_kind
-        )
-        self.facility = sbol3.ReferencedObject(
-            self, self.FACILITY_URI, 0, 1, initial_value=facility
         )
         self.located_in = sbol3.ReferencedObject(
             self, self.LOCATED_IN_URI, 0, 1, initial_value=located_in

@@ -7,7 +7,7 @@ from datetime import datetime
 
 import sbol3
 
-from .namespaces import RUN_ASSET, RUN_INPUT_MATERIAL
+from .namespaces import RUN_ASSET, RUN_COMPONENT, RUN_INPUT_MATERIAL
 from .rules import MATERIAL_LINEAGE_RULE, RUN_REQUIRES_ASSET_RULE
 from .schema import Asset, MaterialLot
 
@@ -103,6 +103,8 @@ def record_run(
     *,
     assets: Sequence[Asset],
     input_materials: Sequence[MaterialLot] = (),
+    input_components: Sequence[sbol3.Component] = (),
+    output_components: Sequence[sbol3.Component] = (),
     output_materials: Sequence[MaterialLot] = (),
     evidence: Sequence[sbol3.ExperimentalData] = (),
     plan: sbol3.Plan | None = None,
@@ -120,7 +122,16 @@ def record_run(
         raise ValueError(f"[{RUN_REQUIRES_ASSET_RULE}] A profile run must name at least one asset")
     if (plan is None) != (executor is None):
         raise ValueError("plan and executor must be supplied together")
-    related = [*assets, *input_materials, *output_materials, *evidence]
+    related = [
+        *assets,
+        *input_materials,
+        *output_materials,
+        *evidence,
+        *input_components,
+        *output_components,
+    ]
+    if any(not isinstance(obj, sbol3.Component) for obj in [*input_components, *output_components]):
+        raise ValueError("Run components must be SBOL Components")
     if plan is not None and executor is not None:
         related.extend([plan, executor])
     for obj in related:
@@ -129,6 +140,10 @@ def record_run(
     usages.extend(
         sbol3.Usage(entity=str(material.identity), roles=[RUN_INPUT_MATERIAL])
         for material in input_materials
+    )
+    usages.extend(
+        sbol3.Usage(entity=str(component.identity), roles=[RUN_COMPONENT])
+        for component in input_components
     )
     associations = []
     if plan is not None and executor is not None:
@@ -145,6 +160,6 @@ def record_run(
         description=description,
     )
     document.add(run)
-    for obj in [*output_materials, *evidence]:
+    for obj in [*output_materials, *evidence, *output_components]:
         _append_generated_by(obj, str(run.identity))
     return run

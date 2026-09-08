@@ -51,7 +51,6 @@ def test_ebef_shape_round_trips_as_typed_sbol3_extensions():
     )
     chamber = make_asset(
         NS + "anaerobic_chamber_1",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=microbiology,
         establishes_zones=[chamber_interior],
@@ -60,7 +59,6 @@ def test_ebef_shape_round_trips_as_typed_sbol3_extensions():
     )
     prep = make_asset(
         NS + "microlab_prep_1",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=chamber_interior,
         manufacturer="Hamilton",
@@ -81,7 +79,6 @@ def test_ebef_shape_round_trips_as_typed_sbol3_extensions():
     )
     proflex = make_asset(
         NS + "proflex_1",
-        facility=ebef,
         kind=INSTRUMENT,
         located_in=microbiology,
         manufacturer="Thermo Fisher Scientific",
@@ -90,7 +87,6 @@ def test_ebef_shape_round_trips_as_typed_sbol3_extensions():
     blocks = [
         make_asset(
             NS + f"proflex_1_block_{index}",
-            facility=ebef,
             kind=FUNCTIONAL_UNIT,
             part_of=proflex,
             capabilities=[
@@ -127,7 +123,6 @@ def test_qualified_asset_query_is_deterministic_and_respects_maturity():
     room = make_zone(NS + "room", facility=facility, kind=ROOM)
     planned = make_asset(
         NS + "planned",
-        facility=facility,
         kind=INSTRUMENT,
         located_in=room,
         capabilities=[
@@ -139,7 +134,6 @@ def test_qualified_asset_query_is_deterministic_and_respects_maturity():
     )
     qualified = make_asset(
         NS + "qualified",
-        facility=facility,
         kind=INSTRUMENT,
         located_in=room,
         capabilities=[
@@ -189,18 +183,15 @@ def test_candidate_query_respects_effective_activity_through_all_containment_edg
     )
     container = make_asset(
         NS + "container",
-        facility=facility,
         kind=INSTRUMENT,
         located_in=room,
     )
     parent = make_asset(
         NS + "parent",
-        facility=facility,
         kind=INSTRUMENT,
     )
     child = make_asset(
         NS + "child",
-        facility=facility,
         kind=FUNCTIONAL_UNIT,
         located_in=container,
         part_of=parent,
@@ -258,10 +249,9 @@ def test_zone_and_asset_cycles_are_rejected():
 def test_mixed_asset_composition_and_location_cycle_is_rejected():
     document = make_document()
     facility = make_facility(NS + "facility")
-    parent = make_asset(NS + "parent", facility=facility, kind=INSTRUMENT)
+    parent = make_asset(NS + "parent", kind=INSTRUMENT)
     child = make_asset(
         NS + "child",
-        facility=facility,
         kind=FUNCTIONAL_UNIT,
         part_of=parent,
     )
@@ -277,7 +267,6 @@ def test_duplicate_capability_requires_a_child_functional_unit():
     facility = make_facility(NS + "facility")
     asset = make_asset(
         NS + "cycler",
-        facility=facility,
         kind=INSTRUMENT,
         capabilities=[
             make_capability(THERMAL_CYCLING),
@@ -294,14 +283,16 @@ def test_cross_facility_location_is_rejected():
     document = make_document()
     first = make_facility(NS + "first_facility")
     second = make_facility(NS + "second_facility")
+    first_room = make_zone(NS + "first_room", facility=first, kind=ROOM)
+    parent = make_asset(NS + "parent", kind=INSTRUMENT, located_in=first_room)
     second_room = make_zone(NS + "second_room", facility=second, kind=ROOM)
     misplaced = make_asset(
         NS + "misplaced",
-        facility=first,
+        part_of=parent,
         kind=INSTRUMENT,
         located_in=second_room,
     )
-    add_all(document, [first, second, second_room, misplaced])
+    add_all(document, [first, second, first_room, second_room, parent, misplaced])
 
     with pytest.raises(InventoryValidationError, match="different facilities"):
         validate_document(document)
@@ -322,7 +313,6 @@ def test_unknown_qualification_and_ambiguous_property_value_are_rejected():
     )
     asset = make_asset(
         NS + "handler",
-        facility=facility,
         kind=INSTRUMENT,
         capabilities=[capability],
     )

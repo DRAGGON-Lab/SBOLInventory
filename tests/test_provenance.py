@@ -27,7 +27,6 @@ def test_run_records_assets_inputs_outputs_and_evidence():
     room = make_zone(NS + "room", facility=facility, kind=ROOM)
     reader = make_asset(
         NS + "reader",
-        facility=facility,
         kind=INSTRUMENT,
         located_in=room,
     )
@@ -36,12 +35,10 @@ def test_run_records_assets_inputs_outputs_and_evidence():
     input_lot = make_bacterial_stock(
         NS + "input",
         built=input_design,
-        facility=facility,
     )
     output_lot = make_bacterial_stock(
         NS + "output",
         built=output_design,
-        facility=facility,
     )
     evidence, attachment = make_evidence(
         NS + "growth_curve",
@@ -113,8 +110,8 @@ def test_material_derivation_rejects_an_indirect_cycle():
     facility = make_facility(NS + "facility")
     first_design = sbol3.Component(NS + "first_design", sbol3.SBO_FUNCTIONAL_ENTITY)
     second_design = sbol3.Component(NS + "second_design", sbol3.SBO_FUNCTIONAL_ENTITY)
-    first = make_bacterial_stock(NS + "first", built=first_design, facility=facility)
-    second = make_bacterial_stock(NS + "second", built=second_design, facility=facility)
+    first = make_bacterial_stock(NS + "first", built=first_design)
+    second = make_bacterial_stock(NS + "second", built=second_design)
     add_all(document, [facility, first_design, second_design, first, second])
 
     record_material_derivation(second, [first])

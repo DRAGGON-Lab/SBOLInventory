@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 import sbol3
 
+from .location import facility_identity as resolve_facility
 from .namespaces import QUALIFICATION_ORDER, QUALIFICATION_PLANNABLE
 from .rules import QUERY_ELIGIBILITY_RULE, QUERY_QUALIFICATION_RULE
 from .schema import Asset, Capability, Facility, MaterialLot, Zone
@@ -43,7 +44,7 @@ def zones(document: sbol3.Document, facility: FacilityFilter = None) -> list[Zon
             obj
             for obj in document.objects
             if isinstance(obj, Zone)
-            and (facility_identity is None or str(obj.facility) == facility_identity)
+            and (facility_identity is None or resolve_facility(obj) == facility_identity)
         ),
         key=lambda obj: str(obj.identity),
     )
@@ -56,7 +57,7 @@ def assets(document: sbol3.Document, facility: FacilityFilter = None) -> list[As
             obj
             for obj in document.objects
             if isinstance(obj, Asset)
-            and (facility_identity is None or str(obj.facility) == facility_identity)
+            and (facility_identity is None or resolve_facility(obj) == facility_identity)
         ),
         key=lambda obj: str(obj.identity),
     )
@@ -70,7 +71,7 @@ def material_lots(document: sbol3.Document, facility: FacilityFilter = None) -> 
             for obj in document.objects
             if isinstance(obj, MaterialLot)
             and obj.inventory_kind is not None
-            and (facility_identity is None or str(obj.facility) == facility_identity)
+            and (facility_identity is None or resolve_facility(obj) == facility_identity)
         ),
         key=lambda obj: str(obj.identity),
     )

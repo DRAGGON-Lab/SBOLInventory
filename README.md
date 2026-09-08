@@ -25,7 +25,7 @@ The first, second, third, and sixth lines are represented directly by the profil
 
 The graph deliberately separates five relationships:
 
-- `facility` says which facility governs a zone, asset, or material lot.
+- `facility` identifies a zone's governing facility. Assets and material lots derive membership through their location, or an asset's physical parent.
 - `parent_zone` nests spatial or policy boundaries.
 - `located_in` gives the direct location of an asset or material lot. The target may be a zone or a container asset.
 - `part_of` composes an asset from child assets. For example, a three-block thermocycler is one parent with three independently bindable block assets.
@@ -103,7 +103,6 @@ facility = make_facility(ns + "facility", name="My laboratory")
 room = make_zone(ns + "main_lab", facility=facility, kind=ROOM)
 handler = make_asset(
     ns + "liquid_handler_1",
-    facility=facility,
     kind=INSTRUMENT,
     located_in=room,
     capabilities=[
@@ -122,7 +121,7 @@ pySBOL3 display IDs use alphanumeric characters and underscores. A full identity
 
 ## Materials and runs
 
-Physical biological and chemical materials remain standard SBOL `Implementation` objects. Designs are never placed in a freezer or consumed by a run; a `MaterialLot` points to the corresponding `Component` through `built`.
+Physical biological and chemical materials remain standard SBOL `Implementation` objects. Designs may be used or generated as information by a run; physical custody and consumption apply to lots. A `MaterialLot` points to the corresponding `Component` through `built`.
 
 For a transformation, create a new output lot and record its derivation from the input lots. `record_run` adds a standard PROV activity, records asset and material usages, links outputs and evidence with `wasGeneratedBy`, and can associate the run with the reviewed `Plan` and responsible `Agent`.
 
@@ -133,11 +132,33 @@ run = record_run(
     ns + "run_2026_08_26",
     assets=[handler],
     input_materials=[input_lot],
+    input_components=[input_design],
+    output_components=[new_design],
     output_materials=[output_lot],
     evidence=[experimental_data],
     plan=reviewed_plan,
     executor=operator_or_control_plane,
 )
+```
+
+ExperimentalData can describe a Component and share its evidence files with it. Repository objects and links record completed transfers without performing network operations:
+
+```python
+from sbol_inventory import (
+    ExperimentalDataDatabase,
+    MetadataDatabase,
+    link_evidence,
+    record_submission,
+    record_retrieval,
+)
+
+journal = ExperimentalDataDatabase(ns + "journal", name="Field Journal")
+synbiohub = MetadataDatabase(ns + "synbiohub", name="SynBioHub")
+add_all(document, [journal, synbiohub])
+link_evidence(experimental_data, input_design)
+record_submission(experimental_data, journal)
+record_submission(input_design, synbiohub)
+record_retrieval(input_design, synbiohub)
 ```
 
 ## Consumer boundary

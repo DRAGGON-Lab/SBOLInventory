@@ -107,7 +107,6 @@ def make_capability(
 def make_asset(
     identity: str,
     *,
-    facility: Reference,
     kind: str,
     located_in: Reference | None = None,
     position: str | None = None,
@@ -123,7 +122,6 @@ def make_asset(
 ) -> Asset:
     return Asset(
         identity=identity,
-        facility=facility,
         kind=kind,
         located_in=located_in,
         position=position,
@@ -144,7 +142,6 @@ def make_material_lot(
     identity: str,
     *,
     built: Reference,
-    facility: Reference,
     kind: str,
     located_in: Reference | None = None,
     position: str | None = None,
@@ -162,7 +159,6 @@ def make_material_lot(
         identity=identity,
         built=built,
         inventory_kind=kind,
-        facility=facility,
         located_in=located_in,
         position=position,
         is_active=True,
@@ -195,13 +191,11 @@ def grid_positions(rows: Sequence[str], columns: Iterable[int]) -> list[str]:
 def make_fridge_minus80(
     identity: str,
     *,
-    facility: Reference,
     located_in: Reference | None = None,
     name: str | None = None,
 ) -> Asset:
     return make_asset(
         identity,
-        facility=facility,
         kind=FRIDGE_MINUS_80,
         located_in=located_in,
         name=name,
@@ -211,13 +205,11 @@ def make_fridge_minus80(
 def make_fridge_minus20(
     identity: str,
     *,
-    facility: Reference,
     located_in: Reference | None = None,
     name: str | None = None,
 ) -> Asset:
     return make_asset(
         identity,
-        facility=facility,
         kind=FRIDGE_MINUS_20,
         located_in=located_in,
         name=name,
@@ -227,13 +219,11 @@ def make_fridge_minus20(
 def make_fridge_4c(
     identity: str,
     *,
-    facility: Reference,
     located_in: Reference | None = None,
     name: str | None = None,
 ) -> Asset:
     return make_asset(
         identity,
-        facility=facility,
         kind=FRIDGE_4C,
         located_in=located_in,
         name=name,
@@ -243,14 +233,12 @@ def make_fridge_4c(
 def make_shelf(
     identity: str,
     *,
-    facility: Reference,
     part_of: Reference,
     name: str | None = None,
     allowed_positions: Iterable[str] | None = None,
 ) -> Asset:
     return make_asset(
         identity,
-        facility=facility,
         kind=SHELF,
         part_of=part_of,
         name=name,
@@ -261,7 +249,6 @@ def make_shelf(
 def make_box(
     identity: str,
     *,
-    facility: Reference,
     located_in: Reference | None = None,
     position: str | None = None,
     rows: Sequence[str],
@@ -270,7 +257,6 @@ def make_box(
 ) -> Asset:
     return make_asset(
         identity,
-        facility=facility,
         kind=BOX,
         located_in=located_in,
         position=position,
@@ -282,7 +268,6 @@ def make_box(
 def make_solid_media_plate(
     identity: str,
     *,
-    facility: Reference,
     located_in: Reference | None = None,
     position: str | None = None,
     rows: Sequence[str],
@@ -291,7 +276,6 @@ def make_solid_media_plate(
 ) -> Asset:
     return make_asset(
         identity,
-        facility=facility,
         kind=SOLID_MEDIA_PLATE,
         located_in=located_in,
         position=position,
@@ -303,14 +287,12 @@ def make_solid_media_plate(
 def make_solid_96_well_plate(
     identity: str,
     *,
-    facility: Reference,
     located_in: Reference | None = None,
     position: str | None = None,
     name: str | None = None,
 ) -> Asset:
     return make_solid_media_plate(
         identity,
-        facility=facility,
         located_in=located_in,
         position=position,
         rows=list("ABCDEFGH"),
@@ -322,14 +304,12 @@ def make_solid_96_well_plate(
 def make_single_well_petri_dish_plate(
     identity: str,
     *,
-    facility: Reference,
     located_in: Reference | None = None,
     position: str | None = None,
     name: str | None = None,
 ) -> Asset:
     return make_solid_media_plate(
         identity,
-        facility=facility,
         located_in=located_in,
         position=position,
         rows=["A"],
@@ -338,34 +318,20 @@ def make_single_well_petri_dish_plate(
     )
 
 
-def make_diluted_plasmid(
-    identity: str, *, built: Reference, facility: Reference, **kwargs
-) -> MaterialLot:
-    return make_material_lot(
-        identity, built=built, facility=facility, kind=DILUTED_PLASMID, **kwargs
-    )
+def make_diluted_plasmid(identity: str, *, built: Reference, **kwargs) -> MaterialLot:
+    return make_material_lot(identity, built=built, kind=DILUTED_PLASMID, **kwargs)
 
 
-def make_bacterial_stock(
-    identity: str, *, built: Reference, facility: Reference, **kwargs
-) -> MaterialLot:
-    return make_material_lot(
-        identity, built=built, facility=facility, kind=BACTERIAL_STOCK, **kwargs
-    )
+def make_bacterial_stock(identity: str, *, built: Reference, **kwargs) -> MaterialLot:
+    return make_material_lot(identity, built=built, kind=BACTERIAL_STOCK, **kwargs)
 
 
-def make_procured_material(
-    identity: str, *, built: Reference, facility: Reference, **kwargs
-) -> MaterialLot:
-    return make_material_lot(
-        identity, built=built, facility=facility, kind=PROCURED_MATERIAL, **kwargs
-    )
+def make_procured_material(identity: str, *, built: Reference, **kwargs) -> MaterialLot:
+    return make_material_lot(identity, built=built, kind=PROCURED_MATERIAL, **kwargs)
 
 
-def make_plated_strain(
-    identity: str, *, built: Reference, facility: Reference, **kwargs
-) -> MaterialLot:
-    return make_material_lot(identity, built=built, facility=facility, kind=PLATED_STRAIN, **kwargs)
+def make_plated_strain(identity: str, *, built: Reference, **kwargs) -> MaterialLot:
+    return make_material_lot(identity, built=built, kind=PLATED_STRAIN, **kwargs)
 
 
 def _require_shared_document(*objects: sbol3.Identified) -> None:
@@ -374,10 +340,6 @@ def _require_shared_document(*objects: sbol3.Identified) -> None:
         raise ValueError("Add all related objects to one document before changing location")
     if any(document is not documents[0] for document in documents[1:]):
         raise ValueError("All related objects must belong to the same document")
-
-
-def _facility_identity(obj: Asset | MaterialLot | Zone) -> str:
-    return str(obj.facility) if obj.facility is not None else ""
 
 
 def locate(
@@ -390,15 +352,13 @@ def locate(
     """Locate an asset or material lot in one zone or container asset.
 
     ``check_occupied=False`` supports bulk graph construction, but does not
-    bypass facility or coordinate checks. Final document validation still
+    bypass coordinate checks. Final document validation still
     rejects double occupancy.
     """
 
     _require_shared_document(item, location)
     if str(item.identity) == str(location.identity):
         raise ValueError("An object cannot be located in itself")
-    if _facility_identity(item) != _facility_identity(location):
-        raise ValueError("Located objects must belong to the same facility")
     normalized_position = position.strip() if position is not None else None
     if normalized_position == "":
         raise ValueError("Position cannot be empty")

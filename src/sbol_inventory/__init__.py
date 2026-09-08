@@ -1,6 +1,13 @@
 """SBOL 3 facility catalogs, material custody, and run provenance."""
 
 from . import namespaces as _namespaces
+from .digital import (
+    ExperimentalDataDatabase,
+    MetadataDatabase,
+    link_evidence,
+    record_retrieval,
+    record_submission,
+)
 from .document import (
     add_all,
     configure_namespace,
@@ -42,6 +49,7 @@ from .factories import (
     place_item,
     remove_from_container,
 )
+from .location import facility_identity
 from .provenance import make_evidence, record_material_derivation, record_run
 from .query import (
     CapabilityMatch,
@@ -70,6 +78,11 @@ from .validation import (
 )
 
 __all__ = [
+    "ExperimentalDataDatabase",
+    "MetadataDatabase",
+    "link_evidence",
+    "record_submission",
+    "record_retrieval",
     "Asset",
     "Capability",
     "CapabilityMatch",
@@ -89,6 +102,7 @@ __all__ = [
     "discard",
     "discard_implementation",
     "facilities",
+    "facility_identity",
     "find_qualified_assets",
     "grid_positions",
     "locate",
