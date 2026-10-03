@@ -58,7 +58,7 @@ microbiology lab (Zone)
 
 Container capacity is represented by explicit `allowedPosition` values. Occupancy is derived from active and inactive objects' direct locations. Inactivation does not silently erase custody: discarding a lot and removing it from a container are separate operations.
 
-Independently schedulable capacity is modeled as child assets, not an integer on the parent. Three ProFlex blocks therefore become three candidate bindings. A descriptive property such as `temperature_zones = 2` stays on each block's thermal-cycling offering because it constrains how that offering behaves but is not independently reservable.
+Independently schedulable capacity is modeled as child assets, not an integer on the parent. Three ProFlex blocks therefore become three candidate bindings. Each block's two independently controlled spatial temperature zones remain a parameter on its thermal-cycling offering. They do not limit the number of temperature setpoints in a protocol. Tube format, temperature range, and block and sample ramp rates are separate constraints with their own sources and units.
 
 ## Designs and material lots
 
@@ -81,6 +81,8 @@ A capability kind is a stable operation IRI such as `LiquidHandling`, `ThermalCy
 The vocabulary is open. An adapter may introduce a domain IRI without modifying the schema. What remains closed and validated is the qualification ladder and the supported control-mode vocabulary, because silently accepting a misspelling there could authorize the wrong execution path. `UnspecifiedControl` represents an honest unknown and is the default; it is not treated as manual or machine-executable control.
 
 Qualification belongs to the offering, not the model number. Two nominally identical devices may have different installed options, calibration, integration maturity, or acceptance status.
+
+Measurement modes such as absorbance and fluorescence are separate operation kinds. An absent offering means unknown or unlisted unless the catalog explicitly states otherwise. Parameter kinds distinguish absolute bounds from offsets above ambient, and nominal dimensions from usable space. Programmability flags supply no operating ranges; unpublished dimensions, utility connections, and local safety policies remain unknown.
 
 ## Consumer contract
 
@@ -105,14 +107,15 @@ Runtime executes this frozen binding and must not re-select a different asset. A
 
 ## Run ledger
 
-The run ledger uses standard SBOL/PROV structures:
+The run ledger uses the native `Plan`, `Agent`, `Activity`, `Association`, and `Usage` classes from [pySBOL3 provenance](https://github.com/SynBioDex/pySBOL3/blob/main/sbol3/provenance.py):
 
 ```text
-prov:Plan ◀── prov:hadPlan ── prov:Association ── prov:agent
-                                  │
-prov:Activity (run) ──────────────┘
-├── prov:Usage(role=RunAsset) ─────────▶ Asset
-├── prov:Usage(role=RunInputMaterial) ─▶ input MaterialLot
+prov:Activity (run)
+├── prov:qualifiedAssociation ─▶ prov:Association
+│   ├── prov:hadPlan ──────────▶ prov:Plan (protocol revision)
+│   └── prov:agent ────────────▶ prov:Agent (executor)
+├── prov:qualifiedUsage ─▶ prov:Usage(role=RunAsset) ─────────▶ Asset
+├── prov:qualifiedUsage ─▶ prov:Usage(role=RunInputMaterial) ─▶ input MaterialLot
 ├── generated output MaterialLot
 │   ├── prov:wasGeneratedBy ───────────▶ run
 │   └── fac:derivedFromMaterial ───────▶ input MaterialLot(s)
@@ -120,6 +123,10 @@ prov:Activity (run) ──────────────┘
     ├── prov:wasGeneratedBy ───────────▶ run
     └── sbol:hasAttachment ────────────▶ Attachment
 ```
+
+A protocol or media recipe has a versioned `Plan` identity with instructions and material requirements in an `Attachment`; `PropertyValue` holds scalar catalog facts. Multiple Plans can be grouped in an SBOL `Collection`. [`examples/material_run.py`](examples/material_run.py) records the exact Plan, executor, actual input and output lots, and evidence for one execution.
+
+The consuming system evaluates functional tests and acceptance-run evidence for each protocol revision, material, parameter set, and installed configuration. Operation-level qualification alone cannot establish protocol acceptance; Profile 0.2 does not encode an approval decision.
 
 Material transformations create new lot identities. They do not overwrite the input lot and thereby destroy its history. Lifecycle or location mutations that matter operationally should likewise be represented as reviewed run outcomes or explicit custody events before this becomes a production LIMS.
 

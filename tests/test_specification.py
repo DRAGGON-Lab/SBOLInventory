@@ -1,4 +1,5 @@
 from pathlib import Path
+from runpy import run_path
 
 import pytest
 import sbol3
@@ -150,6 +151,20 @@ def test_valid_fixtures_use_valid_sbol_terms_and_implementation_provenance():
         for implementation in graph.subjects(RDF.type, SBOL.Implementation):
             for source in graph.objects(implementation, PROV.wasDerivedFrom):
                 assert (source, RDF.type, SBOL.Component) in graph
+
+
+@pytest.mark.parametrize("example", ["ebef_catalog", "material_run"])
+def test_examples_pass_raw_rdf_validation_and_preserve_the_graph(example):
+    document = run_path(str(REPOSITORY / "examples" / f"{example}.py"))[f"build_{example}"]()
+    serialized = document.write_string(sbol3.TURTLE)
+    graph = Graph().parse(data=serialized, format="turtle")
+    conforms, report = _shacl_result(graph)
+    assert conforms, report
+    parsed = make_document()
+    parsed.read_string(serialized, sbol3.TURTLE)
+    assert not parsed.validate().errors
+    validate_inventory_graph(parsed)
+    assert isomorphic(graph, Graph().parse(data=parsed.write_string(sbol3.TURTLE), format="turtle"))
 
 
 @pytest.mark.parametrize(

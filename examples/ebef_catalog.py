@@ -1,7 +1,8 @@
 """A public-data SBOL 3 catalog of Caltech's EBEF.
 
 This is an architectural example, not an operational source of truth. It is
-derived only from the public EBEF equipment page and intentionally omits serial
+derived from the public EBEF equipment page, with separately cited manufacturer
+limits and illumination specifications. It intentionally omits serial
 numbers, network addresses, booking state, calibration, private room details,
 and claims that an instrument is executable through any workflow system.
 """
@@ -11,12 +12,13 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import sbol3
+
 from sbol_inventory import (
     ABSORBANCE_MEASUREMENT,
     ANAEROBIC_ENVIRONMENT_CONTROL,
     BIOSAFETY_CONTAINMENT,
     CENTRIFUGATION,
-    COLD_STORAGE,
     CONFOCAL_MICROSCOPY,
     CONTAINMENT_ZONE,
     CONTROL_UNSPECIFIED,
@@ -38,12 +40,13 @@ from sbol_inventory import (
     SHAKING_INCUBATION,
     STATIC_INCUBATION,
     STEAM_STERILIZATION,
-    STORAGE_ASSET,
     STORAGE_ZONE,
     THERMAL_CYCLING,
     WATER_PURIFICATION,
     WORK_AREA,
     WORKSTATION,
+    Capability,
+    PropertyValue,
     add_all,
     make_asset,
     make_capability,
@@ -57,29 +60,46 @@ from sbol_inventory import (
 SOURCE = (
     "https://resnick.caltech.edu/resource-centers/ecology-and-biosphere-engineering-facility-ebef"
 )
-SOURCE_ACCESSED = "2026-08-26"
+SOURCE_ACCESSED = "2026-10-02"
+EPOCH_SOURCE = "https://www.agilent.com/cs/library/packageinsert/public/Epoch2_IFU_1771011IAW.C.pdf"
+PROFLEX_SOURCE = (
+    "https://assets.thermofisher.com/TFS-Assets/LSG/Specification-Sheets/"
+    "proflex-pcr-system-specification-sheet.pdf"
+)
+AZURE_SOURCE = "https://azurebiosystems.com/products/azure-imaging-systems/azure-300/"
 DEFAULT_NAMESPACE = "https://example.org/ebef/"
 PROPERTY = "https://example.org/ebef/property/"
-DEG_C = "http://qudt.org/vocab/unit/DEG_C"
-PERCENT = "http://qudt.org/vocab/unit/PERCENT"
+OM = "http://www.ontology-of-units-of-measure.org/resource/om-2/"
+DEG_C = OM + "degreeCelsius"
+PERCENT = OM + "percent"
+KELVIN = OM + "kelvin"
+DEG_C_PER_SECOND = OM + "degreeCelsiusPerSecond-Time"
+MILLILITRE = OM + "millilitre"
+FOOT = OM + "foot-International"
 
 
-def described(kind: str, *parameters, control_mode: str = CONTROL_UNSPECIFIED):
-    """A capability evidenced by the public page but not yet commissioned."""
+def described(kind: str, *parameters: PropertyValue) -> Capability:
+    """A publicly described capability with an unverified invocation path."""
 
     return make_capability(
         kind,
         qualification=QUALIFICATION_DESCRIBED,
-        control_mode=control_mode,
+        control_mode=CONTROL_UNSPECIFIED,
         parameters=list(parameters),
     )
 
 
-def prop(name: str, value, unit: str | None = None):
-    return make_property(PROPERTY + name, value, unit=unit)
+def prop(
+    name: str, value: str | int | float | bool, unit: str | None = None, *, source: str = SOURCE
+) -> PropertyValue:
+    """Use OM-2 units and retain the source of each individual fact."""
+
+    property_value = make_property(PROPERTY + name, value, unit=unit)
+    property_value.derived_from = [source]
+    return property_value
 
 
-def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
+def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE) -> sbol3.Document:
     """Build an EBEF-shaped catalog from the facility's public equipment page."""
 
     ns = namespace.rstrip("/") + "/"
@@ -128,6 +148,10 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
         parent_zone=basement_main_lab,
         kind=STORAGE_ZONE,
         name="Freezer room",
+        description=(
+            "Separate refrigerators and freezers operate at 4, -20, and -70 degrees Celsius. "
+            "Individual units and counts are unpublished."
+        ),
     )
     plant_lab = make_zone(
         ns + "plant_lab",
@@ -192,7 +216,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
                 LIQUID_HANDLING,
                 prop("supported_plate_wells", 96),
                 prop("supports_serial_dilution", True),
-                control_mode=CONTROL_UNSPECIFIED,
             )
         ],
         name="Anaerobic liquid handler",
@@ -205,7 +228,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
             described(
                 ELECTROCHEMICAL_MEASUREMENT,
                 prop("supported_plate_wells", 96),
-                control_mode=CONTROL_UNSPECIFIED,
             )
         ],
         name="96-well potentiostat",
@@ -229,7 +251,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
                 prop("camera_pixels_x", 2048),
                 prop("camera_pixels_y", 2048),
                 prop("supports_timelapse", True),
-                control_mode=CONTROL_UNSPECIFIED,
             )
         ],
         name="Dragonfly spinning disk confocal microscope",
@@ -242,32 +263,51 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
         name="Plasma cleaner",
     )
 
-    shaking_incubators = []
-    for index in range(1, 4):
-        refrigerates = index in {2, 3}
-        parameters = [
-            prop("supports_refrigeration", refrigerates),
-            prop("supports_photosynthetic_lighting", refrigerates),
-        ]
-        if index == 1:
-            parameters.append(prop("minimum_temperature", 30.0, DEG_C))
-        shaking_incubators.append(
-            make_asset(
-                ns + f"eppendorf_s44i_{index}",
-                kind=INSTRUMENT,
-                located_in=microbiology,
-                manufacturer="Eppendorf",
-                model="S44i",
-                capabilities=[
-                    described(
-                        SHAKING_INCUBATION,
-                        *parameters,
-                        control_mode=CONTROL_UNSPECIFIED,
-                    )
-                ],
-                name=f"Shaking incubator {index}",
+    shaking_incubator_1 = make_asset(
+        ns + "eppendorf_s44i_1",
+        kind=INSTRUMENT,
+        located_in=microbiology,
+        manufacturer="Eppendorf",
+        model="S44i",
+        capabilities=[
+            described(
+                SHAKING_INCUBATION,
+                prop("supports_refrigeration", False),
+                prop("minimum_temperature", 30.0, DEG_C),
             )
-        )
+        ],
+        name="Shaking incubator 1 (top, heating only)",
+    )
+    shaking_incubator_2 = make_asset(
+        ns + "eppendorf_s44i_2",
+        kind=INSTRUMENT,
+        located_in=microbiology,
+        manufacturer="Eppendorf",
+        model="S44i",
+        capabilities=[
+            described(
+                SHAKING_INCUBATION,
+                prop("supports_refrigeration", True),
+                prop("supports_photosynthetic_lighting", True),
+            )
+        ],
+        name="Shaking incubator 2 (refrigerated)",
+    )
+    shaking_incubator_3 = make_asset(
+        ns + "eppendorf_s44i_3",
+        kind=INSTRUMENT,
+        located_in=microbiology,
+        manufacturer="Eppendorf",
+        model="S44i",
+        capabilities=[
+            described(
+                SHAKING_INCUBATION,
+                prop("supports_refrigeration", True),
+                prop("supports_photosynthetic_lighting", True),
+            )
+        ],
+        name="Shaking incubator 3 (refrigerated)",
+    )
     static_incubator = make_asset(
         ns + "static_incubator_group",
         kind=WORKSTATION,
@@ -293,16 +333,16 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
             described(
                 ABSORBANCE_MEASUREMENT,
                 prop("supported_plate_wells", 96),
-                prop("supports_fluorescence", False),
-                control_mode=CONTROL_UNSPECIFIED,
             ),
             described(
                 INCUBATION,
+                prop("minimum_temperature", 18.0, DEG_C, source=EPOCH_SOURCE),
                 prop("maximum_temperature", 65.0, DEG_C),
-                control_mode=CONTROL_UNSPECIFIED,
+                prop("minimum_temperature_above_ambient", 4.0, KELVIN, source=EPOCH_SOURCE),
             ),
         ],
         name="Epoch 2 plate reader",
+        description="The facility reports absorbance only, with no fluorescence detection.",
     )
 
     proflex = make_asset(
@@ -321,8 +361,13 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
             capabilities=[
                 described(
                     THERMAL_CYCLING,
-                    prop("temperature_zones", 2),
-                    control_mode=CONTROL_UNSPECIFIED,
+                    prop("independently_controlled_temperature_zones", 2),
+                    prop("well_count", 32, source=PROFLEX_SOURCE),
+                    prop("nominal_tube_volume", 0.2, MILLILITRE, source=PROFLEX_SOURCE),
+                    prop("minimum_temperature", 0.0, DEG_C, source=PROFLEX_SOURCE),
+                    prop("maximum_temperature", 100.0, DEG_C, source=PROFLEX_SOURCE),
+                    prop("maximum_block_ramp_rate", 6.0, DEG_C_PER_SECOND, source=PROFLEX_SOURCE),
+                    prop("maximum_sample_ramp_rate", 4.4, DEG_C_PER_SECOND, source=PROFLEX_SOURCE),
                 )
             ],
             name=f"ProFlex independent block {index}",
@@ -335,7 +380,13 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
         kind=INSTRUMENT,
         located_in=microbiology,
         model="Azure 300",
-        capabilities=[described(GEL_IMAGING, control_mode=CONTROL_UNSPECIFIED)],
+        capabilities=[
+            described(
+                GEL_IMAGING,
+                prop("model_supports_uv_illumination", True, source=AZURE_SOURCE),
+                prop("model_supports_blue_light_illumination", True, source=AZURE_SOURCE),
+            )
+        ],
         name="Gel imager",
     )
     electrophoresis = make_asset(
@@ -356,24 +407,16 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
         ],
         name="Media and buffer preparation station",
     )
-    cold_storage = make_asset(
-        ns + "cold_storage_group",
-        kind=STORAGE_ASSET,
-        located_in=freezer_room,
-        capabilities=[
-            described(
-                COLD_STORAGE,
-                prop("documented_temperatures", "4 C, -20 C, and -70 C"),
-            )
-        ],
-        name="Publicly documented cold-storage units",
-        description="Placeholder group pending identifiers for each reservable unit.",
-    )
     main_bsc = make_asset(
         ns + "main_biosafety_cabinet",
         kind=INSTRUMENT,
         located_in=microbiology,
-        capabilities=[described(BIOSAFETY_CONTAINMENT, prop("width_feet", 6.0))],
+        capabilities=[
+            described(
+                BIOSAFETY_CONTAINMENT,
+                prop("nominal_cabinet_width", 6.0, FOOT),
+            )
+        ],
         name="Main-lab biosafety cabinet",
     )
     main_autoclave = make_asset(
@@ -415,7 +458,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
                     prop("programmable_light", True),
                     prop("additive_co2", True),
                     prop("additive_humidity", True),
-                    control_mode=CONTROL_UNSPECIFIED,
                 )
             ],
             name=name,
@@ -427,7 +469,12 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
         ns + "plant_biosafety_cabinet",
         kind=INSTRUMENT,
         located_in=plant_lab,
-        capabilities=[described(BIOSAFETY_CONTAINMENT, prop("width_feet", 4.0))],
+        capabilities=[
+            described(
+                BIOSAFETY_CONTAINMENT,
+                prop("nominal_cabinet_width", 4.0, FOOT),
+            )
+        ],
         name="Plant-lab biosafety cabinet",
     )
     plant_autoclave = make_asset(
@@ -463,7 +510,9 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
             chamber_2_centrifuge,
             dragonfly,
             plasma_cleaner,
-            *shaking_incubators,
+            shaking_incubator_1,
+            shaking_incubator_2,
+            shaking_incubator_3,
             static_incubator,
             epoch,
             proflex,
@@ -471,7 +520,6 @@ def build_ebef_catalog(namespace: str = DEFAULT_NAMESPACE):
             gel_imager,
             electrophoresis,
             media_prep_station,
-            cold_storage,
             main_bsc,
             main_autoclave,
             *plant_chambers,

@@ -169,6 +169,8 @@ No two parameters owned by one offering MAY have the same `fac:propertyKind`. Ma
 
 Exactly one of the five value properties MUST be present. `fac:unit` MAY be present only with `integerValue` or `realValue`. A unit is metadata about a numeric value and MUST NOT be treated as a conversion instruction. Unit conversion and dimensional compatibility are planner responsibilities.
 
+Prefer existing OM-2 unit IRIs, following [SBOL 3 Appendix A.2](https://sbolstandard.org/docs/SBOL3.1.0.pdf). Other absolute unit IRIs, including QUDT, remain valid; validation checks numeric use and IRI structure, not ontology membership or dimensional compatibility.
+
 ## Material lot
 
 A material lot is a standard `sbol:Implementation` carrying `fac:materialKind`. It is not a separate RDF class. This preserves ordinary SBOL interoperability while making profile scope explicit.

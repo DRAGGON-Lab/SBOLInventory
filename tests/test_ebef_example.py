@@ -4,10 +4,14 @@ from runpy import run_path
 import sbol3
 
 from sbol_inventory import (
+    ABSORBANCE_MEASUREMENT,
+    COLD_STORAGE,
     CONTROL_UNSPECIFIED,
+    INCUBATION,
     LIQUID_HANDLING,
     QUALIFICATION_DESCRIBED,
     QUALIFICATION_PLANNABLE,
+    SHAKING_INCUBATION,
     THERMAL_CYCLING,
     Asset,
     Facility,
@@ -66,3 +70,36 @@ def test_public_facts_are_described_candidates_not_execution_claims():
     assert len(liquid) == 1
     assert str(liquid[0].capability.control_mode) == CONTROL_UNSPECIFIED
     assert executable == []
+
+
+def test_serialized_catalog_distinguishes_heating_limits_and_measurement_operations():
+    document = make_document()
+    document.read_string(build_catalog().write_string(sbol3.TURTLE), sbol3.TURTLE)
+    ns = "https://example.org/ebef/"
+    om = "http://www.ontology-of-units-of-measure.org/resource/om-2/"
+    epoch = document.find(ns + "biotek_epoch_2")
+    capabilities = {str(capability.kind): capability for capability in epoch.capabilities}
+    assert set(capabilities) == {ABSORBANCE_MEASUREMENT, INCUBATION}
+    limits = {
+        str(parameter.kind).removeprefix(ns + "property/"): parameter
+        for parameter in capabilities[INCUBATION].parameters
+    }
+    assert limits["minimum_temperature"].real_value == 18.0
+    assert str(limits["minimum_temperature"].unit) == om + "degreeCelsius"
+    assert limits["maximum_temperature"].real_value == 65.0
+    offset = limits["minimum_temperature_above_ambient"]
+    assert offset.real_value == 4.0
+    assert str(offset.unit) == om + "kelvin"
+    assert str(offset.derived_from[0]).startswith("https://www.agilent.com/")
+
+    heating = document.find(ns + "eppendorf_s44i_1").capabilities[0]
+    assert str(heating.kind) == SHAKING_INCUBATION
+    parameters = {str(parameter.kind): parameter for parameter in heating.parameters}
+    assert parameters[ns + "property/supports_refrigeration"].boolean_value is False
+
+
+def test_room_summary_does_not_become_a_reservable_cold_storage_asset():
+    document = build_catalog()
+    assert document.find("https://example.org/ebef/freezer_room") is not None
+    assert document.find("https://example.org/ebef/cold_storage_group") is None
+    assert find_qualified_assets(document, COLD_STORAGE) == []

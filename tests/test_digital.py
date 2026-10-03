@@ -3,12 +3,14 @@ from runpy import run_path
 
 import pytest
 import sbol3
-from rdflib import Literal, URIRef
+from rdflib import Literal, Namespace, URIRef
+from rdflib.namespace import RDF
 
 from sbol_inventory import (
     FOR_COMPONENT,
     RETRIEVED_FROM,
     RUN_COMPONENT,
+    RUN_INPUT_MATERIAL,
     SUBMITTED_TO,
     ExperimentalDataDatabase,
     InventoryValidationError,
@@ -37,6 +39,22 @@ def test_components_and_repository_links_survive_round_trip():
     design, revised, data = [parsed.find(NS + key) for key in ("design", "revised", "data")]
     assert not design.generated_by
     assert list(revised.generated_by) == [run.identity]
+    output_lot = parsed.find(NS + "output_lot")
+    assert list(output_lot.generated_by) == [run.identity]
+    assert list(output_lot.derived_from_material) == [NS + "input_lot"]
+    assert [str(u.entity) for u in run.usage if RUN_INPUT_MATERIAL in u.roles] == [NS + "input_lot"]
+    assert list(parsed.find(NS + "protocol_v1").attachments) == [NS + "instructions"]
+    # Check native PROV serialization as well as the restored Python objects.
+    graph = parsed.graph()
+    prov = Namespace("http://www.w3.org/ns/prov#")
+    run_iri = URIRef(run.identity)
+    association = graph.value(run_iri, prov.qualifiedAssociation)
+    assert (association, RDF.type, prov.Association) in graph
+    assert (association, prov.hadPlan, URIRef(NS + "protocol_v1")) in graph
+    assert (association, prov.agent, URIRef(NS + "operator")) in graph
+    assert (URIRef(NS + "protocol_v1"), RDF.type, prov.Plan) in graph
+    for output in (revised, output_lot, data):
+        assert (URIRef(output.identity), prov.wasGeneratedBy, run_iri) in graph
     assert list(revised.attachments) == list(data.attachments)
     assert data._properties[FOR_COMPONENT] == [URIRef(revised.identity)]
     assert isinstance(parsed.find(NS + "journal"), ExperimentalDataDatabase)

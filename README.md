@@ -52,7 +52,7 @@ Control mode is independent of qualification. Unspecified, manual operation, rev
 
 ## EBEF example
 
-[`examples/ebef_catalog.py`](examples/ebef_catalog.py) is a public-data example based on Caltech's [Ecology and Biosphere Engineering Facility equipment page](https://resnick.caltech.edu/resource-centers/ecology-and-biosphere-engineering-facility-ebef). It models the basement microbiology and microscopy areas, the first-floor plant lab, anaerobic chamber interiors, composite ProFlex blocks, environmental chambers, and the publicly listed equipment and capabilities.
+[`examples/ebef_catalog.py`](examples/ebef_catalog.py) is a public-data example based on Caltech's [Ecology and Biosphere Engineering Facility equipment page](https://resnick.caltech.edu/resource-centers/ecology-and-biosphere-engineering-facility-ebef). It models the basement microbiology and microscopy areas, the first-floor plant lab, anaerobic chamber interiors, composite ProFlex blocks, environmental chambers, and the publicly listed equipment and capabilities. Each parameter records its facility or manufacturer source; manufacturer specifications require verification against the installed equipment.
 
 The example is intentionally not an operational inventory. It contains no serial numbers, addresses, booking state, calibration records, private layout, or claim that any workflow system can execute an instrument. Publicly supported facts begin at `described`.
 
@@ -124,6 +124,8 @@ pySBOL3 display IDs use alphanumeric characters and underscores. A full identity
 Physical biological and chemical materials remain standard SBOL `Implementation` objects. Designs may be used or generated as information by a run; physical custody and consumption apply to lots. A `MaterialLot` points to the corresponding `Component` through `built`.
 
 For a transformation, create a new output lot and record its derivation from the input lots. `record_run` adds a standard PROV activity, records asset and material usages, links outputs and evidence with `wasGeneratedBy`, and can associate the run with the reviewed `Plan` and responsible `Agent`.
+
+[`examples/material_run.py`](examples/material_run.py) demonstrates these links with a versioned protocol, material lots, and evidence. Its records and file references are illustrative; the example executes no protocol.
 
 ```python
 record_material_derivation(output_lot, [input_lot])
