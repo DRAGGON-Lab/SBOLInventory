@@ -1,68 +1,103 @@
-"""Document-level helpers."""
+"""Document lifecycle helpers for the SBOL 3 facility profile."""
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 from urllib.parse import urlparse
 
-import sbol2 as sbol
-from sbol2 import Config
+import sbol3
 
-from .validation import validate_inventory_graph
+from .schema import register_extensions
+from .validation import validate_document
 
 
-def configure_synbiohub(identity_namespace: str) -> str:
-    """Configure pySBOL2 to mint stable, untyped SynBioHub SBOL URIs.
+def configure_namespace(identity_namespace: str | None) -> str | None:
+    """Set the default SBOL 3 namespace used for display-ID construction."""
 
-    ``identity_namespace`` must be the final namespace assigned to a
-    submission, for example ``https://synbiohub.org/user/Gon/inventory_2026``.
-    Factories must subsequently receive display IDs, not full URIs.
-    """
+    if identity_namespace is None:
+        sbol3.set_namespace(None)
+        return None
     namespace = identity_namespace.rstrip("/")
     parsed = urlparse(namespace)
-    if parsed.scheme != "https" or parsed.netloc != "synbiohub.org" or not parsed.path:
-        raise ValueError(
-            "identity_namespace must be an https://synbiohub.org submission namespace"
-        )
-
-    Config.setHomespace(namespace)
-    Config.setOption("sbol_compliant_uris", True)
-    Config.setOption("sbol_typed_uris", False)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("identity_namespace must be an absolute HTTP(S) IRI")
+    sbol3.set_namespace(namespace)
     return namespace
 
 
-def make_document() -> sbol.Document:
-    """Create an empty SBOL document."""
-    return sbol.Document()
+def configure_synbiohub(identity_namespace: str) -> str:
+    """Compatibility helper for a canonical SynBioHub collection namespace."""
+
+    namespace = identity_namespace.rstrip("/")
+    parsed = urlparse(namespace)
+    if parsed.scheme != "https" or parsed.netloc != "synbiohub.org" or not parsed.path:
+        raise ValueError("identity_namespace must be an https://synbiohub.org collection namespace")
+    configure_namespace(namespace)
+    return namespace
 
 
-def add_all(doc: sbol.Document, objects: Iterable) -> sbol.Document:
-    """Add multiple SBOL top-level objects to a document."""
-    for obj in objects:
-        doc.add(obj)
-    return doc
+def make_document() -> sbol3.Document:
+    register_extensions()
+    return sbol3.Document()
+
+
+def add_all(document: sbol3.Document, objects: Iterable[sbol3.TopLevel]) -> sbol3.Document:
+    document.add(list(objects))
+    return document
+
+
+def read_document(
+    path: str | Path,
+    *,
+    file_format: str | None = None,
+    validate: bool = True,
+) -> sbol3.Document:
+    register_extensions()
+    document = sbol3.Document()
+    document.read(path, file_format)
+    if validate:
+        validate_document(document)
+    return document
+
+
+def write_document(
+    document: sbol3.Document,
+    path: str | Path,
+    *,
+    file_format: str | None = None,
+    validate: bool = True,
+) -> Path:
+    target = Path(path)
+    if validate:
+        validate_document(document)
+    document.write(target, file_format)
+    return target
 
 
 def write_rdfxml(
-    doc: sbol.Document,
+    document: sbol3.Document,
     path: str | Path,
     *,
-    validate: bool = False,
-    validate_inventory: bool = True,
+    validate: bool = True,
 ) -> Path:
-    """Write RDF/XML after local inventory validation.
+    return write_document(
+        document,
+        path,
+        file_format=sbol3.RDF_XML,
+        validate=validate,
+    )
 
-    Set ``validate=True`` to additionally run pySBOL2's online SBOL validator.
-    That network request is deliberately opt-in.
-    """
-    target = Path(path)
-    if validate_inventory:
-        validate_inventory_graph(doc)
-    previous_validate = Config.getOption("validate")
-    Config.setOption("validate", validate)
-    try:
-        doc.write(str(target))
-    finally:
-        Config.setOption("validate", previous_validate)
-    return target
+
+def write_turtle(
+    document: sbol3.Document,
+    path: str | Path,
+    *,
+    validate: bool = True,
+) -> Path:
+    return write_document(
+        document,
+        path,
+        file_format=sbol3.TURTLE,
+        validate=validate,
+    )
