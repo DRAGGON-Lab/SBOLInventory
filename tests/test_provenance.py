@@ -114,7 +114,7 @@ def test_run_rejects_input_material_as_generated_output():
     lot = make_bacterial_stock(NS + "lot", built=design)
     add_all(document, [facility, room, reader, design, lot])
 
-    with pytest.raises(ValueError, match=r"\\[sbolinv-17005\\]"):
+    with pytest.raises(ValueError, match=r"\[sbolinv-17005\]"):
         record_run(
             document,
             NS + "invalid_run",
