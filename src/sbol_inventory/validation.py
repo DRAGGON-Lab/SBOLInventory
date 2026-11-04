@@ -55,6 +55,7 @@ from .rules import (
     RUN_ASSET_RULE,
     RUN_COMPONENT_RULE,
     RUN_INPUT_MATERIAL_RULE,
+    RUN_OUTPUT_MATERIAL_RULE,
     RUN_REQUIRES_ASSET_RULE,
     SBOL_CORE_RULE,
     SUBMISSION_RULE,
@@ -394,6 +395,7 @@ def _validate_profile_runs(document: sbol3.Document) -> None:
             continue
         profile_usage_count = 0
         run_asset_count = 0
+        input_material_identities: set[str] = set()
         for usage in obj.usage:
             roles = {str(role) for role in usage.roles}
             if RUN_ASSET in roles:
@@ -420,6 +422,7 @@ def _validate_profile_runs(document: sbol3.Document) -> None:
                         RUN_INPUT_MATERIAL_RULE,
                         f"Run {obj.identity} input usage does not refer to a MaterialLot",
                     )
+                input_material_identities.add(str(material.identity))
             if RUN_COMPONENT in roles:
                 profile_usage_count += 1
                 _require_reference(
@@ -434,6 +437,13 @@ def _validate_profile_runs(document: sbol3.Document) -> None:
                 RUN_REQUIRES_ASSET_RULE,
                 f"Profile run {obj.identity} has no RunAsset usage",
             )
+        for material_identity in sorted(input_material_identities):
+            material = document.find(material_identity)
+            if str(obj.identity) in {str(run) for run in material.generated_by}:
+                raise InventoryValidationError(
+                    RUN_OUTPUT_MATERIAL_RULE,
+                    f"Run {obj.identity} marks input material {material_identity} as generated output",
+                )
 
 
 def _validate_digital_links(document: sbol3.Document) -> None:

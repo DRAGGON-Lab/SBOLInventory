@@ -105,6 +105,28 @@ def test_run_records_assets_inputs_outputs_and_evidence():
         )
 
 
+def test_run_rejects_input_material_as_generated_output():
+    document = make_document()
+    facility = make_facility(NS + "facility")
+    room = make_zone(NS + "room", facility=facility, kind=ROOM)
+    reader = make_asset(NS + "reader", kind=INSTRUMENT, located_in=room)
+    design = sbol3.Component(NS + "design", sbol3.SBO_FUNCTIONAL_ENTITY)
+    lot = make_bacterial_stock(NS + "lot", built=design)
+    add_all(document, [facility, room, reader, design, lot])
+
+    with pytest.raises(ValueError, match=r"\\[sbolinv-17005\\]"):
+        record_run(
+            document,
+            NS + "invalid_run",
+            assets=[reader],
+            input_materials=[lot],
+            output_materials=[lot],
+        )
+
+    assert document.find(NS + "invalid_run") is None
+    assert not lot.generated_by
+
+
 def test_material_derivation_rejects_an_indirect_cycle():
     document = make_document()
     facility = make_facility(NS + "facility")
