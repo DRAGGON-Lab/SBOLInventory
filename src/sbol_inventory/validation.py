@@ -442,7 +442,8 @@ def _validate_profile_runs(document: sbol3.Document) -> None:
             if str(obj.identity) in {str(run) for run in material.generated_by}:
                 raise InventoryValidationError(
                     RUN_OUTPUT_MATERIAL_RULE,
-                    f"Run {obj.identity} marks input material {material_identity} as generated output",
+                    f"Run {obj.identity} marks input material {material_identity} as "
+                    "generated output",
                 )
 
 
