@@ -459,6 +459,16 @@ fixture = "fixtures/invalid/sbolinv-17004-run-component.ttl"
 statement = "A Usage carrying RunComponent MUST name exactly one document-local Component."
 
 [[rules]]
+id = "sbolinv-17005"
+section = "Run provenance"
+classes = ["Writer", "Validator"]
+strength = "required"
+machine_checkable = true
+shacl_core = false
+fixture = "fixtures/invalid/sbolinv-17005-input-output-material.ttl"
+statement = "A material lot MUST NOT be both a RunInputMaterial usage entity and a generated output of the same profile run."
+
+[[rules]]
 id = "sbolinv-19001"
 section = "Digital records and repositories"
 classes = ["Writer", "Validator"]

@@ -310,6 +310,13 @@ shacl = true
 python_semantic = true
 
 [[fixtures]]
+path = "invalid/sbolinv-17005-input-output-material.ttl"
+expect = "invalid"
+rule = "sbolinv-17005"
+shacl = false
+python_semantic = true
+
+[[fixtures]]
 path = "invalid/sbolinv-19001-evidence-component.ttl"
 expect = "invalid"
 rule = "sbolinv-19001"

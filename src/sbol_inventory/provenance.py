@@ -8,7 +8,7 @@ from datetime import datetime
 import sbol3
 
 from .namespaces import RUN_ASSET, RUN_COMPONENT, RUN_INPUT_MATERIAL
-from .rules import MATERIAL_LINEAGE_RULE, RUN_REQUIRES_ASSET_RULE
+from .rules import MATERIAL_LINEAGE_RULE, RUN_OUTPUT_MATERIAL_RULE, RUN_REQUIRES_ASSET_RULE
 from .schema import Asset, MaterialLot
 
 
@@ -118,6 +118,14 @@ def record_run(
 
     if document.find(identity) is not None:
         raise ValueError(f"Document already contains {identity}")
+    input_material_identities = {str(material.identity) for material in input_materials}
+    output_material_identities = {str(material.identity) for material in output_materials}
+    overlap = sorted(input_material_identities & output_material_identities)
+    if overlap:
+        raise ValueError(
+            f"[{RUN_OUTPUT_MATERIAL_RULE}] Material lot {overlap[0]} cannot be both an input "
+            "and a generated output of the same run"
+        )
     if not assets:
         raise ValueError(f"[{RUN_REQUIRES_ASSET_RULE}] A profile run must name at least one asset")
     if (plan is None) != (executor is None):
